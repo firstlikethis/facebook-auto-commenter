@@ -3,7 +3,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import { ReactQueryDevtools } from 'react-query/devtools';
 
 // Auth Components
 import AuthGuard from './components/auth/AuthGuard';
@@ -17,14 +16,6 @@ import AuthLayout from './layouts/AuthLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import GroupList from './pages/groups/GroupList';
-import GroupDetail from './pages/groups/GroupDetail';
-import KeywordList from './pages/keywords/KeywordList';
-import KeywordDetail from './pages/keywords/KeywordDetail';
-import CommentHistory from './pages/comments/CommentHistory';
-import ScanTasks from './pages/tasks/ScanTasks';
-import TaskDetail from './pages/tasks/TaskDetail';
-import Settings from './pages/settings/Settings';
 import NotFound from './pages/NotFound';
 
 // Context Providers
@@ -63,14 +54,7 @@ function App() {
                 <Route element={<AuthGuard />}>
                   <Route element={<DashboardLayout />}>
                     <Route path="/" element={<Dashboard />} />
-                    <Route path="/groups" element={<GroupList />} />
-                    <Route path="/groups/:id" element={<GroupDetail />} />
-                    <Route path="/keywords" element={<KeywordList />} />
-                    <Route path="/keywords/:id" element={<KeywordDetail />} />
-                    <Route path="/comments" element={<CommentHistory />} />
-                    <Route path="/tasks" element={<ScanTasks />} />
-                    <Route path="/tasks/:id" element={<TaskDetail />} />
-                    <Route path="/settings" element={<Settings />} />
+                    {/* ลบเส้นทางที่ยังไม่มีไฟล์ออก */}
                   </Route>
                 </Route>
 
@@ -84,9 +68,6 @@ function App() {
           </SettingsProvider>
         </AuthProvider>
       </ThemeProvider>
-      
-      {/* React Query Devtools - visible only in development */}
-      <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
     </QueryClientProvider>
   );
 }
