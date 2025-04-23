@@ -21,6 +21,9 @@ dotenv.config();
 // สร้าง express app
 const app = express();
 
+// ตั้งค่า trust proxy สำหรับ rate limit (ต้องอยู่หลังการสร้าง app)
+app.set('trust proxy', 1);
+
 // Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

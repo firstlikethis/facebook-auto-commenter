@@ -4,6 +4,9 @@ const app = require('./app');
 const logger = require('./utils/logger');
 const { setupCronJobs } = require('./utils/cron');
 
+// แก้ไข mongoose deprecation warning
+mongoose.set('strictQuery', false);
+
 // ตั้งค่า unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   logger.error(`Unhandled Rejection: ${err.message}`);
