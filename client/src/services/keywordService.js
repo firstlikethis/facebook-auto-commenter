@@ -1,4 +1,3 @@
-
 // client/src/services/keywordService.js
 import api from './api';
 
@@ -13,19 +12,19 @@ export const keywordService = {
   // Get single keyword
   async getKeyword(id) {
     const response = await api.get(`/keywords/${id}`);
-    return response.data.data;
+    return response.data;
   },
 
   // Create keyword
   async createKeyword(keywordData) {
     const response = await api.post('/keywords', keywordData);
-    return response.data.data;
+    return response.data;
   },
 
   // Update keyword
   async updateKeyword(id, keywordData) {
     const response = await api.put(`/keywords/${id}`, keywordData);
-    return response.data.data;
+    return response.data;
   },
 
   // Delete keyword
@@ -37,10 +36,10 @@ export const keywordService = {
   // Toggle keyword status
   async toggleKeywordStatus(id) {
     const response = await api.post(`/keywords/${id}/toggle-status`);
-    return response.data.data;
+    return response.data;
   },
 
-  // Upload image for keyword
+  // Upload image
   async uploadImage(id, imageFile) {
     const formData = new FormData();
     formData.append('image', imageFile);
@@ -50,7 +49,8 @@ export const keywordService = {
         'Content-Type': 'multipart/form-data'
       }
     });
-    return response.data.data;
+    
+    return response.data;
   },
 
   // Delete image
@@ -59,15 +59,15 @@ export const keywordService = {
     return response.data;
   },
 
-  // Get keyword categories
+  // Get categories
   async getCategories() {
     const response = await api.get('/keywords/categories');
-    return response.data.data;
+    return response.data;
   },
 
-  // Get keyword statistics
+  // Get statistics
   async getKeywordStats() {
     const response = await api.get('/keywords/stats');
-    return response.data.data;
+    return response.data;
   }
 };

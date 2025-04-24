@@ -1,4 +1,3 @@
-
 // client/src/services/settingService.js
 import api from './api';
 
@@ -6,73 +5,73 @@ export const settingService = {
   // Get all settings
   async getSettings() {
     const response = await api.get('/settings');
-    return response.data.data;
+    return response.data;
   },
 
   // Update settings
-  async updateSettings(settingsData) {
-    const response = await api.put('/settings', settingsData);
-    return response.data.data;
+  async updateSettings(settingData) {
+    const response = await api.put('/settings', settingData);
+    return response.data;
   },
 
   // Get browser settings
   async getBrowserSettings() {
     const response = await api.get('/settings/browser');
-    return response.data.data;
+    return response.data;
   },
 
   // Update browser settings
-  async updateBrowserSettings(settings) {
-    const response = await api.put('/settings/browser', settings);
-    return response.data.data;
+  async updateBrowserSettings(browserSettings) {
+    const response = await api.put('/settings/browser', browserSettings);
+    return response.data;
   },
 
   // Get scan settings
   async getScanSettings() {
     const response = await api.get('/settings/scan');
-    return response.data.data;
+    return response.data;
   },
 
   // Update scan settings
-  async updateScanSettings(settings) {
-    const response = await api.put('/settings/scan', settings);
-    return response.data.data;
+  async updateScanSettings(scanSettings) {
+    const response = await api.put('/settings/scan', scanSettings);
+    return response.data;
   },
 
   // Get delay settings
   async getDelaySettings() {
     const response = await api.get('/settings/delay');
-    return response.data.data;
+    return response.data;
   },
 
   // Update delay settings
-  async updateDelaySettings(settings) {
-    const response = await api.put('/settings/delay', settings);
-    return response.data.data;
+  async updateDelaySettings(delaySettings) {
+    const response = await api.put('/settings/delay', delaySettings);
+    return response.data;
   },
 
   // Get human behavior settings
   async getHumanBehaviorSettings() {
     const response = await api.get('/settings/human-behavior');
-    return response.data.data;
+    return response.data;
   },
 
   // Update human behavior settings
-  async updateHumanBehaviorSettings(settings) {
-    const response = await api.put('/settings/human-behavior', settings);
-    return response.data.data;
+  async updateHumanBehaviorSettings(behaviorSettings) {
+    const response = await api.put('/settings/human-behavior', behaviorSettings);
+    return response.data;
   },
 
   // Get notification settings
   async getNotificationSettings() {
     const response = await api.get('/settings/notification');
-    return response.data.data;
+    return response.data;
   },
 
   // Update notification settings
-  async updateNotificationSettings(settings) {
-    const response = await api.put('/settings/notification', settings);
-    return response.data.data;
+  async updateNotificationSettings(notificationSettings) {
+    const response = await api.put('/settings/notification', notificationSettings);
+    return response.data;
   },
 
   // Reset settings to default

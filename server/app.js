@@ -64,7 +64,7 @@ app.use(compression());
 
 // ตั้งค่า CORS - อนุญาต cross-origin requests
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3005',
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true
 }));
 

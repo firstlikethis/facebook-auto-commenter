@@ -11,9 +11,7 @@ import {
 import {
   Save as SaveIcon,
   ArrowBack as BackIcon,
-  PlayArrow as StartIcon,
-  Schedule as ScheduleIcon,
-  Settings as SettingsIcon
+  PlayArrow as StartIcon
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';

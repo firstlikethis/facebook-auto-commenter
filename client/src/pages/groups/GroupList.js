@@ -5,9 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Button, CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, IconButton,
-  Chip, Dialog, DialogActions, DialogContent, DialogContentText,
-  DialogTitle, TextField, Switch, FormControlLabel, Stack, Tooltip,
-  InputAdornment, MenuItem, Select, FormControl, InputLabel
+  Chip, TextField, Switch, FormControlLabel, Stack, Tooltip,
+  InputAdornment, MenuItem, Select, FormControl, InputLabel, Divider
 } from '@mui/material';
 import {
   Add as AddIcon,

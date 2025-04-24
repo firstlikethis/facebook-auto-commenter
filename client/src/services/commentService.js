@@ -1,4 +1,3 @@
-
 // client/src/services/commentService.js
 import api from './api';
 
@@ -13,7 +12,7 @@ export const commentService = {
   // Get single comment
   async getComment(id) {
     const response = await api.get(`/comments/${id}`);
-    return response.data.data;
+    return response.data;
   },
 
   // Delete comment
@@ -25,28 +24,31 @@ export const commentService = {
   // Get comment statistics
   async getCommentStats() {
     const response = await api.get('/comments/stats');
-    return response.data.data;
+    return response.data;
   },
 
-  // Cleanup old comments
-  async cleanupOldComments(days) {
+  // Clean up old comments
+  async cleanupOldComments(days = 30) {
     const response = await api.post('/comments/cleanup', { days });
     return response.data;
   },
 
   // Search comments
   async searchComments(searchParams) {
-    const response = await api.get('/comments/search', { params: searchParams });
+    const response = await api.get('/comments/search', {
+      params: searchParams
+    });
     return response.data;
   },
 
   // Export comments
-  async exportComments(format = 'csv', filter = {}) {
-    const params = { format, ...filter };
+  async exportComments(format = 'csv', filterParams = {}) {
+    const params = { format, ...filterParams };
     const response = await api.get('/comments/export', { 
       params,
-      responseType: 'blob'
+      responseType: 'blob' 
     });
+    
     return response.data;
   }
 };
