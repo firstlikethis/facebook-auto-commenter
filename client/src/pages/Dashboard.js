@@ -19,102 +19,36 @@ import RecentActivityCard from '../components/dashboard/RecentActivityCard';
 import ActiveTasksCard from '../components/dashboard/ActiveTasksCard';
 import TopGroupsCard from '../components/dashboard/TopGroupsCard';
 import TopKeywordsCard from '../components/dashboard/TopKeywordsCard';
-
-// Placeholder API calls - these should be replaced with actual API calls
-const fetchDashboardData = async () => {
-  // Simulating API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  return {
-    stats: {
-      groups: { total: 25, active: 18 },
-      keywords: { total: 42, active: 36 },
-      comments: { 
-        total: 1248, 
-        today: 76, 
-        last7Days: 342, 
-        last30Days: 982
-      },
-      tasks: {
-        total: 64,
-        active: 2,
-        completed: 56,
-        failed: 6
-      }
-    },
-    topGroups: [
-      { _id: '1', groupName: 'รถยนต์มือสอง', count: 145 },
-      { _id: '2', groupName: 'ขายบ้านและคอนโด', count: 112 },
-      { _id: '3', groupName: 'อสังหาริมทรัพย์', count: 98 },
-      { _id: '4', groupName: 'โปรโมชั่นบัตรเครดิต', count: 87 },
-      { _id: '5', groupName: 'ประกันชีวิต', count: 64 }
-    ],
-    topKeywords: [
-      { _id: 'รถยนต์มือสอง', count: 126 },
-      { _id: 'ขายบ้าน', count: 98 },
-      { _id: 'คอนโด', count: 87 },
-      { _id: 'สินเชื่อ', count: 65 },
-      { _id: 'ประกัน', count: 54 }
-    ],
-    recentActivity: [
-      { 
-        id: 1, 
-        title: 'คอมเมนต์สำเร็จ', 
-        description: 'คอมเมนต์ในโพสต์ "ขายรถยนต์ Honda Civic ปี 2018"', 
-        time: new Date(Date.now() - 30 * 60000), 
-        status: 'success'
-      },
-      { 
-        id: 2, 
-        title: 'พบคำสำคัญใหม่', 
-        description: 'พบคำสำคัญ "สินเชื่อบ้าน" ในกลุ่ม "ขายบ้านและคอนโด"', 
-        time: new Date(Date.now() - 120 * 60000), 
-        status: 'success' 
-      },
-      { 
-        id: 3, 
-        title: 'งานสแกนเสร็จสิ้น', 
-        description: 'สแกน 5 กลุ่ม คอมเมนต์ 17 โพสต์', 
-        time: new Date(Date.now() - 240 * 60000), 
-        status: 'success' 
-      },
-      { 
-        id: 4, 
-        title: 'คอมเมนต์ล้มเหลว', 
-        description: 'ไม่สามารถคอมเมนต์ในโพสต์ระบบตรวจพบการใช้งานผิดปกติ', 
-        time: new Date(Date.now() - 360 * 60000), 
-        status: 'error' 
-      },
-      { 
-        id: 5, 
-        title: 'บัญชี Facebook ล็อกอินล้มเหลว', 
-        description: 'บัญชี example@gmail.com ล็อกอินล้มเหลว', 
-        time: new Date(Date.now() - 720 * 60000), 
-        status: 'error' 
-      }
-    ],
-    commentsTrend: [
-      { date: '17/04', count: 28 },
-      { date: '18/04', count: 35 },
-      { date: '19/04', count: 42 },
-      { date: '20/04', count: 38 },
-      { date: '21/04', count: 54 },
-      { date: '22/04', count: 67 },
-      { date: '23/04', count: 76 }
-    ],
-    commentsByCategory: [
-      { name: 'รถยนต์', value: 235 },
-      { name: 'อสังหาริมทรัพย์', value: 187 },
-      { name: 'การเงิน', value: 126 },
-      { name: 'ท่องเที่ยว', value: 98 },
-      { name: 'ประกัน', value: 76 }
-    ]
-  };
-};
+import api from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { data, isLoading, error, refetch } = useQuery('dashboardData', fetchDashboardData);
+  
+  // ดึงข้อมูล dashboard overview จาก API
+  const { data, isLoading, error, refetch } = useQuery(
+    'dashboardData',
+    async () => {
+      const response = await api.get('/dashboard/overview');
+      return response.data.data;
+    },
+    {
+      refetchInterval: 300000, // รีเฟรชทุก 5 นาที
+      staleTime: 120000 // ข้อมูลจะเก่าหลังจาก 2 นาที
+    }
+  );
+
+  // ดึงข้อมูลกิจกรรมล่าสุด
+  const { data: activityData, isLoading: isLoadingActivity } = useQuery(
+    'recentActivity',
+    async () => {
+      const response = await api.get('/dashboard/recent-activity');
+      return response.data.data;
+    },
+    {
+      refetchInterval: 60000, // รีเฟรชทุก 1 นาที
+      staleTime: 30000 // ข้อมูลจะเก่าหลังจาก 30 วินาที
+    }
+  );
 
   if (isLoading) {
     return (
@@ -149,8 +83,8 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="กลุ่มทั้งหมด"
-            value={data.stats.groups.total}
-            subtitle={`เปิดใช้งาน ${data.stats.groups.active} กลุ่ม`}
+            value={data?.groups?.total || 0}
+            subtitle={`เปิดใช้งาน ${data?.groups?.active || 0} กลุ่ม`}
             icon={<GroupIcon />}
             color="#3f51b5"
           />
@@ -158,8 +92,8 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="คำสำคัญ"
-            value={data.stats.keywords.total}
-            subtitle={`เปิดใช้งาน ${data.stats.keywords.active} คำ`}
+            value={data?.keywords?.total || 0}
+            subtitle={`เปิดใช้งาน ${data?.keywords?.active || 0} คำ`}
             icon={<KeyIcon />}
             color="#f44336"
           />
@@ -167,8 +101,8 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="คอมเมนต์ทั้งหมด"
-            value={data.stats.comments.total}
-            subtitle={`วันนี้ ${data.stats.comments.today} คอมเมนต์`}
+            value={data?.comments?.total || 0}
+            subtitle={`วันนี้ ${data?.comments?.today || 0} คอมเมนต์`}
             icon={<CommentIcon />}
             color="#4caf50"
           />
@@ -176,7 +110,7 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="บัญชี Facebook"
-            value={data.stats.tasks.active}
+            value={data?.tasks?.running || 0}
             subtitle="กำลังทำงาน"
             icon={<FacebookIcon />}
             color="#ff9800"
@@ -192,7 +126,7 @@ const Dashboard = () => {
           <Grid item xs={12} mb={3}>
             <ChartCard title="แนวโน้มการคอมเมนต์">
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={data.commentsTrend}>
+                <LineChart data={data?.comments?.trend || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
@@ -210,11 +144,11 @@ const Dashboard = () => {
             </ChartCard>
           </Grid>
 
-          {/* Chart: Comments by Category */}
+          {/* Chart: Comments by Category (เรากำหนดให้แสดงคอมเมนต์ตามหมวดหมู่ของคำสำคัญ) */}
           <Grid item xs={12} mb={3}>
             <ChartCard title="คอมเมนต์ตามหมวดหมู่">
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={data.commentsByCategory}>
+                <BarChart data={activityData?.commentsByCategory || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
@@ -295,18 +229,19 @@ const Dashboard = () => {
 
           {/* Top Groups */}
           <Box mb={3}>
-            <TopGroupsCard topGroups={data.topGroups} />
+            <TopGroupsCard topGroups={data?.topGroups || []} />
           </Box>
 
           {/* Top Keywords */}
           <Box mb={3}>
-            <TopKeywordsCard topKeywords={data.topKeywords} />
+            <TopKeywordsCard topKeywords={data?.topKeywords || []} />
           </Box>
 
           {/* Recent Activity */}
           <RecentActivityCard 
             title="กิจกรรมล่าสุด" 
-            activities={data.recentActivity} 
+            activities={activityData?.recentActivity || []} 
+            loading={isLoadingActivity}
           />
         </Grid>
       </Grid>

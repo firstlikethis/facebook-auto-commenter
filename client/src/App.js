@@ -19,6 +19,33 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import NotFound from './pages/NotFound';
 
+// Facebook Account Pages
+import FacebookAccountList from './pages/facebook/AccountList';
+import FacebookAccountDetail from './pages/facebook/AccountDetail';
+
+// Group Pages
+import GroupList from './pages/groups/GroupList';
+import GroupDetail from './pages/groups/GroupDetail';
+import GroupStats from './pages/groups/GroupStats';
+
+// Keyword Pages
+import KeywordList from './pages/keywords/KeywordList';
+import KeywordDetail from './pages/keywords/KeywordDetail';
+
+// Task Pages
+import ScanTasks from './pages/tasks/ScanTasks';
+import NewTask from './pages/tasks/NewTask';
+import TaskDetail from './pages/tasks/TaskDetail';
+
+// Comment Pages
+import CommentList from './pages/comments/CommentList';
+
+// Stats Pages
+import Stats from './pages/stats/Stats';
+
+// Settings Pages
+import Settings from './pages/settings/Settings';
+
 // Context Providers
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -132,7 +159,33 @@ function App() {
                   <Route element={<AuthGuard />}>
                     <Route element={<DashboardLayout />}>
                       <Route path="/" element={<Dashboard />} />
-                      {/* ลิงก์ไปยังหน้าอื่นๆ จะถูกเพิ่มที่นี่ */}
+                      
+                      {/* Facebook Account Routes */}
+                      <Route path="/facebook-accounts" element={<FacebookAccountList />} />
+                      <Route path="/facebook-accounts/:id" element={<FacebookAccountDetail />} />
+                      
+                      {/* Group Routes */}
+                      <Route path="/groups" element={<GroupList />} />
+                      <Route path="/groups/:id" element={<GroupDetail />} />
+                      <Route path="/groups/:id/stats" element={<GroupStats />} />
+                      
+                      {/* Keyword Routes */}
+                      <Route path="/keywords" element={<KeywordList />} />
+                      <Route path="/keywords/:id" element={<KeywordDetail />} />
+                      
+                      {/* Task Routes */}
+                      <Route path="/tasks" element={<ScanTasks />} />
+                      <Route path="/tasks/new" element={<NewTask />} />
+                      <Route path="/tasks/:id" element={<TaskDetail />} />
+                      
+                      {/* Comment Routes */}
+                      <Route path="/comments" element={<CommentList />} />
+                      
+                      {/* Stats Routes */}
+                      <Route path="/stats" element={<Stats />} />
+                      
+                      {/* Settings Routes */}
+                      <Route path="/settings" element={<Settings />} />
                     </Route>
                   </Route>
 

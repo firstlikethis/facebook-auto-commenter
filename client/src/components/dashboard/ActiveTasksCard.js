@@ -1,4 +1,3 @@
-
 // client/src/components/dashboard/ActiveTasksCard.js
 import React from 'react';
 import { useQuery } from 'react-query';
@@ -10,16 +9,19 @@ import {
 import { PlayArrow as PlayIcon } from '@mui/icons-material';
 import { format } from 'date-fns';
 
-import { scanTaskService } from '../../services/scanTaskService';
+import api from '../../services/api';
 
 const ActiveTasksCard = () => {
   const navigate = useNavigate();
   
   const { data, isLoading, error } = useQuery(
     'activeTasks',
-    () => scanTaskService.getActiveTasks(),
+    async () => {
+      const response = await api.get('/scan-tasks/active');
+      return response.data;
+    },
     {
-      refetchInterval: 10000
+      refetchInterval: 10000 // รีเฟรชทุก 10 วินาที
     }
   );
   
@@ -33,7 +35,7 @@ const ActiveTasksCard = () => {
             color="primary" 
             size="small"
             startIcon={<PlayIcon />}
-            onClick={() => navigate('/tasks')}
+            onClick={() => navigate('/tasks/new')}
           >
             สร้างงานใหม่
           </Button>
@@ -53,7 +55,7 @@ const ActiveTasksCard = () => {
           </Box>
         ) : (
           <List>
-            {data?.data?.length ? (
+            {data?.data && data.data.length > 0 ? (
               data.data.slice(0, 5).map((task, index) => (
                 <React.Fragment key={task._id}>
                   <ListItem button onClick={() => navigate(`/tasks/${task._id}`)}>
@@ -61,9 +63,11 @@ const ActiveTasksCard = () => {
                       primary={
                         <Box display="flex" alignItems="center">
                           <Typography variant="body1" noWrap>
-                            {task.groups.length > 1 
+                            {task.groups && task.groups.length > 1 
                               ? `สแกน ${task.groups.length} กลุ่ม` 
-                              : `สแกนกลุ่ม ${task.groups[0]?.name || 'ไม่ระบุชื่อ'}`}
+                              : task.groups && task.groups[0]
+                                ? `สแกนกลุ่ม ${task.groups[0].name || 'ไม่ระบุชื่อ'}`
+                                : 'สแกนกลุ่ม'}
                           </Typography>
                           <Chip 
                             label={`${task.results?.totalPostsScanned || 0} โพสต์`} 
@@ -76,7 +80,7 @@ const ActiveTasksCard = () => {
                       }
                       secondary={
                         <Typography variant="body2" color="textSecondary">
-                          เริ่ม: {format(new Date(task.startTime), 'HH:mm:ss')} | 
+                          เริ่ม: {task.startTime ? format(new Date(task.startTime), 'HH:mm:ss') : '-'} | 
                           คอมเมนต์: {task.results?.totalCommentsPosted || 0}
                         </Typography>
                       }
