@@ -21,7 +21,7 @@ import NotFound from './pages/NotFound';
 
 // Context Providers
 import { AuthProvider } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 
 // Create React Query client
@@ -36,11 +36,12 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const [themeMode, setThemeMode] = React.useState('light');
-
+  // ใช้ theme จาก context แทน local state
+  const { darkMode } = useTheme();
+  
   const theme = React.useMemo(() => createTheme({
     palette: {
-      mode: themeMode,
+      mode: darkMode ? 'dark' : 'light',
       primary: {
         main: '#6366f1',
         light: '#818cf8',
@@ -74,12 +75,12 @@ function App() {
         dark: '#2563eb',
       },
       background: {
-        default: themeMode === 'light' ? '#f1f5f9' : '#0f172a',
-        paper: themeMode === 'light' ? '#ffffff' : '#1e293b',
+        default: darkMode ? '#0f172a' : '#f1f5f9',
+        paper: darkMode ? '#1e293b' : '#ffffff',
       },
       text: {
-        primary: themeMode === 'light' ? '#1e293b' : '#f8fafc',
-        secondary: themeMode === 'light' ? '#64748b' : '#94a3b8',
+        primary: darkMode ? '#f8fafc' : '#1e293b',
+        secondary: darkMode ? '#94a3b8' : '#64748b',
       },
     },
     typography: {
@@ -100,15 +101,15 @@ function App() {
       MuiCard: {
         styleOverrides: {
           root: {
-            boxShadow: themeMode === 'light' 
-              ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)'
-              : '0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.48)',
+            boxShadow: darkMode 
+              ? '0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.48)'
+              : '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
             borderRadius: 8,
           },
         },
       },
     },
-  }), [themeMode]);
+  }), [darkMode]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -150,4 +151,13 @@ function App() {
   );
 }
 
-export default App;
+// ฟังก์ชันนี้ช่วยให้เราสามารถใช้ theme hooks ในส่วน App component ได้
+function AppWithTheme() {
+  return (
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
+  );
+}
+
+export default AppWithTheme;

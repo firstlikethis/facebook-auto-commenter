@@ -1,8 +1,8 @@
 // client/src/pages/Dashboard.js
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useQuery } from 'react-query';
 import { useNavigate } from 'react-router-dom';
-import { Box, Grid, Paper, Typography, Card, CardContent, Button, Avatar, CircularProgress, Divider } from '@mui/material';
+import { Box, Grid, Typography, Card, CardContent, Button, CircularProgress } from '@mui/material';
 import { 
   Group as GroupIcon, 
   Comment as CommentIcon, 

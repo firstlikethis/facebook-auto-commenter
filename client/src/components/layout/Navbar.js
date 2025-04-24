@@ -13,8 +13,8 @@ import {
   Badge, 
   Tooltip,
   Avatar,
-  Switch,
   ListItemIcon,
+  ListItemText,
   Divider
 } from '@mui/material';
 import {
@@ -144,14 +144,14 @@ const Navbar = ({ title }) => {
             <ListItemIcon>
               <PersonIcon fontSize="small" />
             </ListItemIcon>
-            โปรไฟล์
+            <ListItemText primary="โปรไฟล์" />
           </MenuItem>
           
           <MenuItem onClick={handleMenuClose}>
             <ListItemIcon>
               <SettingsIcon fontSize="small" />
             </ListItemIcon>
-            ตั้งค่า
+            <ListItemText primary="ตั้งค่า" />
           </MenuItem>
           
           <Divider />

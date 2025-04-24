@@ -1,9 +1,8 @@
-
 // client/src/components/dashboard/TopKeywordsCard.js
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Card, CardContent, CardHeader, Divider, List, ListItem, ListItemText, 
+  Card, CardContent, CardHeader, Divider, List, ListItem, 
   Chip, Box, Typography, LinearProgress
 } from '@mui/material';
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Card, CardContent, CardHeader, Divider, List, ListItem, ListItemText, 
-  ListItemSecondaryAction, Box, Typography, LinearProgress
+  Box, Typography, LinearProgress
 } from '@mui/material';
 
 const TopGroupsCard = ({ topGroups }) => {
