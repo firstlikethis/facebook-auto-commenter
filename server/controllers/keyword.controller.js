@@ -1,5 +1,5 @@
 // server/controllers/keyword.controller.js
-const Keyword = require('../models/User');  // ต้องแก้ไขเป็น '../models/Keyword'
+const Keyword = require('../models/Keyword');  // Fix: Changed from '../models/User' to '../models/Keyword'
 const asyncHandler = require('../middlewares/async.middleware');
 const ErrorResponse = require('../utils/errorResponse');
 const path = require('path');

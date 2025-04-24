@@ -6,7 +6,8 @@ import {
   Box, Typography, Button, CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, IconButton,
   Chip, TextField, Switch, FormControlLabel, Stack, Tooltip,
-  InputAdornment, MenuItem, Select, FormControl, InputLabel, Divider
+  InputAdornment, MenuItem, Select, FormControl, InputLabel, Divider,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
 import {
   Add as AddIcon,

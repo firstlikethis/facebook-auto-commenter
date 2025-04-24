@@ -1,5 +1,5 @@
 // server/controllers/facebook-account.controller.js
-const FacebookAccount = require('../models/User');  // ใช้ model ที่ถูกกำหนดไว้ในโมเดล User
+const FacebookAccount = require('../models/FacebookAccount');  // ใช้ model ที่ถูกกำหนดไว้ในโมเดล User
 const asyncHandler = require('../middlewares/async.middleware');
 const ErrorResponse = require('../utils/errorResponse');
 const logger = require('../utils/logger');

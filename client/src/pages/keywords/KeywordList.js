@@ -7,7 +7,7 @@ import {
   TableCell, TableContainer, TableHead, TableRow, IconButton,
   Chip, Dialog, DialogActions, DialogContent, DialogContentText,
   DialogTitle, TextField, Stack, Tooltip, Switch, FormControlLabel, 
-  InputAdornment, Menu, MenuItem, ListItemIcon, ListItemText
+  InputAdornment, Menu, MenuItem, ListItemIcon, ListItemText, Divider // Added Divider import here
 } from '@mui/material';
 import {
   Add as AddIcon,
