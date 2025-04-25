@@ -5,9 +5,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Typography, Button, CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, IconButton,
-  Chip, Dialog, DialogActions, DialogContent, DialogContentText,
-  DialogTitle, TextField, Stack, Tooltip, Switch, FormControlLabel, 
-  InputAdornment, Menu, MenuItem, ListItemIcon, ListItemText, Divider // Added Divider import here
+  Chip, TextField, Stack, Tooltip, InputAdornment, Menu, MenuItem, 
+  ListItemIcon, ListItemText, Divider
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -58,14 +57,21 @@ const KeywordList = () => {
       sort
     }),
     {
-      keepPreviousData: true
+      keepPreviousData: true,
+      refetchOnWindowFocus: false, // ป้องกันการโหลดซ้ำเมื่อกลับมาที่หน้าต่าง
+      retry: 1 // ลดจำนวนการลองใหม่เมื่อเกิดข้อผิดพลาด
     }
   );
 
   // โหลดหมวดหมู่คำสำคัญ
   const { data: categoriesData } = useQuery(
     'keywordCategories',
-    () => keywordService.getCategories()
+    () => keywordService.getCategories(),
+    {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 300000 // 5 นาที
+    }
   );
 
   // Mutation สำหรับลบคำสำคัญ
@@ -182,6 +188,14 @@ const KeywordList = () => {
         <Typography color="error">
           เกิดข้อผิดพลาดในการโหลดข้อมูล: {error.message}
         </Typography>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={() => navigate('/keywords/new')}
+          sx={{ mt: 2 }}
+        >
+          เพิ่มคำสำคัญใหม่
+        </Button>
       </Box>
     );
   }

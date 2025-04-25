@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
     // สร้างชื่อไฟล์ที่ไม่ซ้ำกัน
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const extension = path.extname(file.originalname);
-    cb(null, 'image-' + uniqueSuffix + extension);
+    cb(null, 'keyword_image_' + uniqueSuffix + extension);
   }
 });
 
@@ -38,7 +38,8 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760 // 10MB
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760, // 10MB
+    files: 1 // รับได้เพียง 1 ไฟล์
   },
   fileFilter
 });

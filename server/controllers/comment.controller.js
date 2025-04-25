@@ -7,6 +7,11 @@ const ErrorResponse = require('../utils/errorResponse');
 // @route   GET /api/comments
 // @access  Private
 exports.getComments = asyncHandler(async (req, res, next) => {
+  // Check if req.user exists
+  if (!req.user) {
+    return next(new ErrorResponse('Authentication required', 401));
+  }
+
   // Add pagination, filtering, and sorting
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 20;
@@ -80,6 +85,11 @@ exports.getComments = asyncHandler(async (req, res, next) => {
 // @route   GET /api/comments/:id
 // @access  Private
 exports.getComment = asyncHandler(async (req, res, next) => {
+  // Check if req.user exists
+  if (!req.user) {
+    return next(new ErrorResponse('Authentication required', 401));
+  }
+
   const comment = await Comment.findOne({
     _id: req.params.id,
     user: req.user.id
@@ -102,6 +112,11 @@ exports.getComment = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/comments/:id
 // @access  Private
 exports.deleteComment = asyncHandler(async (req, res, next) => {
+  // Check if req.user exists
+  if (!req.user) {
+    return next(new ErrorResponse('Authentication required', 401));
+  }
+
   const comment = await Comment.findOne({
     _id: req.params.id,
     user: req.user.id
@@ -123,6 +138,11 @@ exports.deleteComment = asyncHandler(async (req, res, next) => {
 // @route   GET /api/comments/stats
 // @access  Private
 exports.getCommentStats = asyncHandler(async (req, res, next) => {
+  // Check if req.user exists
+  if (!req.user) {
+    return next(new ErrorResponse('Authentication required', 401));
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
@@ -193,6 +213,11 @@ exports.getCommentStats = asyncHandler(async (req, res, next) => {
 // @route   POST /api/comments/cleanup
 // @access  Private
 exports.cleanupOldComments = asyncHandler(async (req, res, next) => {
+  // Check if req.user exists
+  if (!req.user) {
+    return next(new ErrorResponse('Authentication required', 401));
+  }
+
   const days = parseInt(req.body.days, 10) || 30;
   
   if (days < 1) {
@@ -217,6 +242,11 @@ exports.cleanupOldComments = asyncHandler(async (req, res, next) => {
 // @route   GET /api/comments/search
 // @access  Private
 exports.searchComments = asyncHandler(async (req, res, next) => {
+  // Check if req.user exists
+  if (!req.user) {
+    return next(new ErrorResponse('Authentication required', 401));
+  }
+
   const { query, groupId, keywordMatched, success, fromDate, toDate } = req.query;
   
   const filter = { user: req.user.id };
@@ -275,12 +305,51 @@ exports.searchComments = asyncHandler(async (req, res, next) => {
 // @route   GET /api/comments/export
 // @access  Private
 exports.exportComments = asyncHandler(async (req, res, next) => {
+  // Check if req.user exists
+  if (!req.user) {
+    return next(new ErrorResponse('Authentication required', 401));
+  }
+
   const { format = 'csv', ...filterParams } = req.query;
   
   const filter = { user: req.user.id };
   
   // Apply filters similar to searchComments
-  // (code omitted for brevity)
+  if (filterParams.groupId) {
+    filter.groupId = filterParams.groupId;
+  }
+  
+  if (filterParams.keywordMatched) {
+    filter.keywordMatched = filterParams.keywordMatched;
+  }
+  
+  if (filterParams.success !== undefined) {
+    filter.success = filterParams.success === 'true';
+  }
+  
+  if (filterParams.search) {
+    filter.$or = [
+      { postContent: { $regex: filterParams.search, $options: 'i' } },
+      { messageUsed: { $regex: filterParams.search, $options: 'i' } },
+      { keywordMatched: { $regex: filterParams.search, $options: 'i' } },
+      { groupName: { $regex: filterParams.search, $options: 'i' } }
+    ];
+  }
+  
+  // Date range
+  if (filterParams.fromDate || filterParams.toDate) {
+    filter.createdAt = {};
+    
+    if (filterParams.fromDate) {
+      filter.createdAt.$gte = new Date(filterParams.fromDate);
+    }
+    
+    if (filterParams.toDate) {
+      const toDateObj = new Date(filterParams.toDate);
+      toDateObj.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = toDateObj;
+    }
+  }
   
   const comments = await Comment.find(filter)
     .sort('-createdAt')
@@ -291,18 +360,35 @@ exports.exportComments = asyncHandler(async (req, res, next) => {
   // Format data for export
   const exportData = comments.map(comment => ({
     id: comment._id,
-    groupName: comment.groupName,
-    postContent: comment.postContent,
-    keywordMatched: comment.keywordMatched,
-    messageUsed: comment.messageUsed,
+    groupName: comment.groupName || (comment.group ? comment.group.name : ''),
+    postContent: comment.postContent || '',
+    keywordMatched: comment.keywordMatched || '',
+    messageUsed: comment.messageUsed || '',
     success: comment.success ? 'Yes' : 'No',
     createdAt: comment.createdAt.toISOString()
   }));
   
   // CSV format is the default
   let output = '';
-  const headers = Object.keys(exportData[0] || {}).join(',') + '\n';
-  output = headers + exportData.map(item => Object.values(item).join(',')).join('\n');
+  
+  if (exportData.length > 0) {
+    const headers = Object.keys(exportData[0] || {}).join(',') + '\n';
+    output = headers + exportData.map(item => {
+      return Object.values(item).map(val => {
+        // Escape commas and quotes in CSV
+        if (typeof val === 'string') {
+          val = val.replace(/"/g, '""');
+          if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+            val = `"${val}"`;
+          }
+        }
+        return val;
+      }).join(',');
+    }).join('\n');
+  } else {
+    // If no data, just return headers
+    output = 'id,groupName,postContent,keywordMatched,messageUsed,success,createdAt\n';
+  }
   
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename=comments.csv');

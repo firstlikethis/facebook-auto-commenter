@@ -178,62 +178,77 @@ exports.toggleKeywordStatus = asyncHandler(async (req, res, next) => {
 // @route   POST /api/keywords/:id/upload-image
 // @access  Private
 exports.uploadImage = asyncHandler(async (req, res, next) => {
-  const keyword = await Keyword.findOne({
-    _id: req.params.id,
-    user: req.user.id
-  });
-  
-  if (!keyword) {
-    return next(new ErrorResponse(`ไม่พบคำสำคัญที่มี ID ${req.params.id}`, 404));
+  try {
+    // ตรวจสอบว่ามี keyword หรือไม่
+    const keyword = await Keyword.findOne({
+      _id: req.params.id,
+      user: req.user.id
+    });
+    
+    if (!keyword) {
+      return next(new ErrorResponse(`ไม่พบคำสำคัญที่มี ID ${req.params.id}`, 404));
+    }
+    
+    // แสดงข้อมูลเกี่ยวกับ request ที่ได้รับ
+    console.log('Request received for upload:');
+    console.log('- Files:', req.files);
+    console.log('- File:', req.file);
+    console.log('- Has multipart header:', req.headers['content-type']?.includes('multipart/form-data'));
+    
+    // ตรวจสอบว่าไฟล์ถูกอัปโหลดหรือไม่
+    if (!req.file) {
+      return next(new ErrorResponse('กรุณาอัปโหลดรูปภาพ', 400));
+    }
+    
+    // แสดงข้อมูลไฟล์ที่ได้รับเพื่อช่วยในการแก้ไขปัญหา
+    console.log('File uploaded successfully:');
+    console.log('- Filename:', req.file.filename);
+    console.log('- Original name:', req.file.originalname);
+    console.log('- Mimetype:', req.file.mimetype);
+    console.log('- Size:', req.file.size);
+    console.log('- Path:', req.file.path);
+    
+    // ตรวจสอบว่าไฟล์มีอยู่จริง
+    const fs = require('fs-extra');
+    const path = require('path');
+    
+    const filePath = req.file.path;
+    if (!fs.existsSync(filePath)) {
+      return next(new ErrorResponse('ไฟล์อัปโหลดไม่สำเร็จ ไม่พบไฟล์ในระบบ', 500));
+    }
+    
+    // สร้าง URL ที่สมบูรณ์
+    // แปลงเส้นทางให้เป็นรูปแบบที่ถูกต้องสำหรับ URL
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
+    // แปลง backslash เป็น forward slash สำหรับ URL และลบตำแหน่งที่เป็น uploads/ ด้านหน้า
+    let urlPath = filePath.replace(/\\/g, '/');
+    if (urlPath.startsWith('uploads/')) {
+      urlPath = urlPath; // คงไว้ตามเดิม
+    } else if (!urlPath.startsWith('/')) {
+      urlPath = '/' + urlPath;
+    }
+    
+    const imageUrl = `${baseUrl}${urlPath}`;
+    console.log('Generated URL:', imageUrl);
+    
+    // เพิ่มรูปภาพใน keyword
+    keyword.images.push({
+      path: filePath,
+      url: imageUrl,
+      weight: 1
+    });
+    
+    await keyword.save();
+    
+    res.status(200).json({
+      success: true,
+      data: keyword
+    });
+  } catch (error) {
+    console.error('Error in uploadImage:', error);
+    return next(new ErrorResponse(`การอัปโหลดรูปภาพล้มเหลว: ${error.message}`, 500));
   }
-  
-  // Check if image was uploaded
-  if (!req.files || !req.files.image) {
-    return next(new ErrorResponse('กรุณาอัปโหลดรูปภาพ', 400));
-  }
-  
-  const image = req.files.image;
-  
-  // Check if image is actually an image
-  if (!image.mimetype.startsWith('image')) {
-    return next(new ErrorResponse('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น', 400));
-  }
-  
-  // Check file size
-  if (image.size > process.env.MAX_FILE_SIZE) {
-    return next(new ErrorResponse(`ขนาดไฟล์เกินขนาดที่กำหนด (${process.env.MAX_FILE_SIZE / 1024 / 1024} MB)`, 400));
-  }
-  
-  // Create custom filename
-  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-  const extension = path.extname(image.name);
-  const filename = `keyword_image_${keyword._id}_${uniqueSuffix}${extension}`;
-  
-  // Create upload dir if not exists
-  const uploadDir = path.join(process.env.FILE_UPLOAD_PATH || './uploads', `user_${req.user.id}`);
-  fs.ensureDirSync(uploadDir);
-  
-  // Move file to upload dir
-  const filePath = path.join(uploadDir, filename);
-  await image.mv(filePath);
-  
-  // Get url for file
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const imageUrl = `${baseUrl}/uploads/user_${req.user.id}/${filename}`;
-  
-  // Add image to keyword
-  keyword.images.push({
-    path: filePath,
-    url: imageUrl,
-    weight: 1
-  });
-  
-  await keyword.save();
-  
-  res.status(200).json({
-    success: true,
-    data: keyword
-  });
 });
 
 // @desc    Delete image

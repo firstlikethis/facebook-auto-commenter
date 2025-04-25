@@ -88,7 +88,7 @@ const KeywordDetail = () => {
 
   // Mutation สำหรับอัปโหลดรูปภาพ
   const uploadMutation = useMutation(
-    (formData) => keywordService.uploadImage(id, formData),
+    (formData) => keywordService.uploadImage(id, selectedImage), // ส่ง selectedImage ตรงๆ แทน formData
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['keyword', id]);
@@ -98,10 +98,12 @@ const KeywordDetail = () => {
         setSelectedImage(null);
       },
       onError: (error) => {
-        toast.error(`เกิดข้อผิดพลาดในการอัปโหลด: ${error.response?.data?.message || error.message}`);
+        console.error("Upload error details:", error);
+        toast.error(`เกิดข้อผิดพลาดในการอัปโหลด: ${error.message}`);
       }
     }
   );
+  
 
   // Mutation สำหรับลบรูปภาพ
   const deleteImageMutation = useMutation(
@@ -226,8 +228,15 @@ const KeywordDetail = () => {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      console.log("Selected file details:", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      });
+      
       setSelectedImage(file);
-
+  
       // สร้าง URL สำหรับแสดงตัวอย่าง
       const reader = new FileReader();
       reader.onload = () => {
@@ -242,11 +251,30 @@ const KeywordDetail = () => {
       toast.error('กรุณาเลือกรูปภาพ');
       return;
     }
-
+  
+    console.log("Selected image:", selectedImage.name, selectedImage.size, selectedImage.type);
+    
+    // ตรวจสอบขนาดไฟล์
+    if (selectedImage.size > 10 * 1024 * 1024) { // 10MB
+      toast.error('ขนาดไฟล์ใหญ่เกินไป (สูงสุด 10MB)');
+      return;
+    }
+  
+    // ตรวจสอบประเภทไฟล์
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+    if (!validTypes.includes(selectedImage.type)) {
+      toast.error('รองรับเฉพาะไฟล์ภาพประเภท JPG, JPEG, PNG และ GIF เท่านั้น');
+      return;
+    }
+  
+    // สร้าง FormData และเพิ่มไฟล์เข้าไป
     const formData = new FormData();
     formData.append('image', selectedImage);
+    
+    // เรียกใช้ mutation เพื่ออัปโหลด
     uploadMutation.mutate(formData);
   };
+  
 
   const handleDeleteImage = (imageId) => {
     deleteImageMutation.mutate({ keywordId: id, imageId });

@@ -12,6 +12,20 @@ const scanTaskRoutes = require('./scan-tasks.routes');
 const settingRoutes = require('./settings.routes');
 const dashboardRoutes = require('./dashboard.routes');
 
+// Health check route - must be first and without auth
+router.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
+// Debug route - must be without auth
+router.get('/api/debug', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    env: process.env.NODE_ENV,
+    time: new Date().toISOString()
+  });
+});
+
 // API routes
 router.use('/api/auth', authRoutes);
 router.use('/api/facebook-accounts', fbAccountRoutes);
@@ -21,10 +35,5 @@ router.use('/api/comments', commentRoutes);
 router.use('/api/scan-tasks', scanTaskRoutes);
 router.use('/api/settings', settingRoutes);
 router.use('/api/dashboard', dashboardRoutes);
-
-// Health check route
-router.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Server is running' });
-});
 
 module.exports = router;

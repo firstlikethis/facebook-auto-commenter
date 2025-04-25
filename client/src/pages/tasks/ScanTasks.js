@@ -1,4 +1,4 @@
-// client/src/pages/tasks/ScanTasks.js
+// client/src/pages/tasks/ScanTasks.js - แก้ไขส่วน import
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +6,7 @@ import {
   Box, Typography, Button, CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, IconButton,
   Chip, Stack, Tooltip, InputAdornment, TextField, Badge,
-  Menu, MenuItem, ListItemIcon, ListItemText, LinearProgress
+  Menu, MenuItem, ListItemIcon, ListItemText, LinearProgress, Divider
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -14,7 +14,6 @@ import {
   Visibility as ViewIcon,
   PlayArrow as StartIcon,
   Stop as StopIcon,
-  BarChart as StatsIcon,
   Delete as DeleteIcon,
   Schedule as ScheduleIcon,
   MoreVert as MoreIcon,
