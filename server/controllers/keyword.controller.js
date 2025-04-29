@@ -179,7 +179,8 @@ exports.toggleKeywordStatus = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.uploadImage = asyncHandler(async (req, res, next) => {
   try {
-    // ตรวจสอบว่ามี keyword หรือไม่
+    console.log("Upload request received");
+    
     const keyword = await Keyword.findOne({
       _id: req.params.id,
       user: req.user.id
@@ -189,52 +190,21 @@ exports.uploadImage = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse(`ไม่พบคำสำคัญที่มี ID ${req.params.id}`, 404));
     }
     
-    // แสดงข้อมูลเกี่ยวกับ request ที่ได้รับ
-    console.log('Request received for upload:');
-    console.log('- Files:', req.files);
-    console.log('- File:', req.file);
-    console.log('- Has multipart header:', req.headers['content-type']?.includes('multipart/form-data'));
-    
     // ตรวจสอบว่าไฟล์ถูกอัปโหลดหรือไม่
     if (!req.file) {
       return next(new ErrorResponse('กรุณาอัปโหลดรูปภาพ', 400));
     }
     
-    // แสดงข้อมูลไฟล์ที่ได้รับเพื่อช่วยในการแก้ไขปัญหา
-    console.log('File uploaded successfully:');
-    console.log('- Filename:', req.file.filename);
-    console.log('- Original name:', req.file.originalname);
-    console.log('- Mimetype:', req.file.mimetype);
-    console.log('- Size:', req.file.size);
-    console.log('- Path:', req.file.path);
-    
-    // ตรวจสอบว่าไฟล์มีอยู่จริง
-    const fs = require('fs-extra');
-    const path = require('path');
-    
-    const filePath = req.file.path;
-    if (!fs.existsSync(filePath)) {
-      return next(new ErrorResponse('ไฟล์อัปโหลดไม่สำเร็จ ไม่พบไฟล์ในระบบ', 500));
-    }
+    console.log("File successfully uploaded:", req.file);
     
     // สร้าง URL ที่สมบูรณ์
-    // แปลงเส้นทางให้เป็นรูปแบบที่ถูกต้องสำหรับ URL
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    
-    // แปลง backslash เป็น forward slash สำหรับ URL และลบตำแหน่งที่เป็น uploads/ ด้านหน้า
-    let urlPath = filePath.replace(/\\/g, '/');
-    if (urlPath.startsWith('uploads/')) {
-      urlPath = urlPath; // คงไว้ตามเดิม
-    } else if (!urlPath.startsWith('/')) {
-      urlPath = '/' + urlPath;
-    }
-    
+    const urlPath = `/uploads/user_${req.user.id}/${req.file.filename}`;
     const imageUrl = `${baseUrl}${urlPath}`;
-    console.log('Generated URL:', imageUrl);
     
     // เพิ่มรูปภาพใน keyword
     keyword.images.push({
-      path: filePath,
+      path: req.file.path,
       url: imageUrl,
       weight: 1
     });

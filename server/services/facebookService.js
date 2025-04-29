@@ -287,6 +287,7 @@ class FacebookService {
                   href.includes('/groups/') && 
                   !href.includes('/groups/feed') && 
                   !href.includes('/groups/discover') && 
+                  !href.includes('/groups/joins') && 
                   !href.includes('/help');
           });
         
@@ -345,6 +346,9 @@ class FacebookService {
         // ต้องมี groupId
         if (!group.groupId) return false;
         
+        // กรอง groupId "joins"
+        if (group.groupId === "joins") return false;
+        
         // ชื่อต้องมีความหมาย
         if (group.name.length < 2) return false;
         
@@ -354,7 +358,12 @@ class FacebookService {
           if (group.name.toLowerCase() === invalid) return false;
         }
         
-        return true;
+        // กรอง groupId ที่เป็นคำพิเศษของ Facebook
+        const invalidGroupIds = ['joins', 'discover', 'feed', 'create', 'browse', 'search'];
+        if (invalidGroupIds.includes(group.groupId.toLowerCase())) return false;
+        
+        // ตรวจสอบ URL ว่าเป็น URL ของกลุ่มจริง ๆ
+        return group.url.includes('/groups/') && !group.url.includes('/groups/joins');
       });
       
       logger.info(`Found ${validGroups.length} valid groups`);
@@ -764,6 +773,110 @@ class FacebookService {
   }
 
   /**
+   * ตรวจสอบ Checkpoint หรือการยืนยันตัวตน
+   */
+  async checkForCheckpoint() {
+    try {
+      // ตรวจสอบหน้า checkpoint
+      const isCheckpoint = await this.page.evaluate(() => {
+        return window.location.href.includes('checkpoint') || 
+               !!document.querySelector('#checkpointSubmitButton') ||
+               !!document.querySelector('form[action*="checkpoint"]');
+      });
+      
+      if (isCheckpoint) {
+        logger.warn(`Checkpoint detected for account: ${this.account.email}`);
+        
+        // บันทึก screenshot
+        const screenshotPath = path.join(
+          process.cwd(), 
+          'logs', 
+          'checkpoints', 
+          `checkpoint_${this.account._id}_${Date.now()}.png`
+        );
+        
+        fs.ensureDirSync(path.dirname(screenshotPath));
+        await this.page.screenshot({ path: screenshotPath, fullPage: true });
+        
+        logger.info(`Checkpoint screenshot saved to: ${screenshotPath}`);
+        
+        return { isCheckpoint: true, screenshotPath };
+      }
+      
+      return { isCheckpoint: false };
+    } catch (error) {
+      logger.error(`Error checking for checkpoint: ${error.message}`);
+      return { isCheckpoint: false, error: error.message };
+    }
+  }
+
+  /**
+   * บันทึก cookies
+   */
+  async saveCookies() {
+    try {
+      if (!this.browser || !this.page) {
+        throw new Error('Browser or page not initialized');
+      }
+      
+      const cookies = await this.page.cookies();
+      
+      // สร้าง path สำหรับบันทึก cookies
+      const cookiesDir = path.join(process.cwd(), 'cookies');
+      fs.ensureDirSync(cookiesDir);
+      
+      const cookiesPath = path.join(cookiesDir, `${this.account._id}.json`);
+      
+      // บันทึก cookies
+      fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
+      
+      // อัปเดต account
+      this.account.cookiesPath = cookiesPath;
+      await this.account.save();
+      
+      logger.info(`Cookies saved for account: ${this.account.email}`);
+      
+      return true;
+    } catch (error) {
+      logger.error(`Error saving cookies: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * โหลด cookies
+   */
+  async loadCookies() {
+    try {
+      if (!this.browser || !this.page) {
+        throw new Error('Browser or page not initialized');
+      }
+      
+      // ตรวจสอบว่ามีไฟล์ cookies หรือไม่
+      if (!this.account.cookiesPath || !fs.existsSync(this.account.cookiesPath)) {
+        logger.info(`No cookies file found for account: ${this.account.email}`);
+        return false;
+      }
+      
+      // โหลด cookies
+      const cookiesString = fs.readFileSync(this.account.cookiesPath, 'utf8');
+      const cookies = JSON.parse(cookiesString);
+      
+      // เพิ่ม cookies ลงใน page
+      for (const cookie of cookies) {
+        await this.page.setCookie(cookie);
+      }
+      
+      logger.info(`Cookies loaded for account: ${this.account.email}`);
+      
+      return true;
+    } catch (error) {
+      logger.error(`Error loading cookies: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
    * ปิด browser
    */
   async close() {
@@ -774,6 +887,55 @@ class FacebookService {
       }
     } catch (error) {
       logger.error(`Error closing browser: ${error.message}`);
+    }
+  }
+
+  /**
+   * ล็อกเอาต์จาก Facebook
+   */
+  async logout() {
+    try {
+      logger.info(`Logging out account: ${this.account.email}`);
+      
+      // ตรวจสอบการล็อกอิน
+      if (!this.isLoggedIn) {
+        logger.info(`Account ${this.account.email} is not logged in`);
+        return true;
+      }
+      
+      // นำทางไปยังหน้าแรกของ Facebook
+      await this.page.goto('https://www.facebook.com', { waitUntil: 'networkidle2' });
+      
+      // คลิกที่เมนู account
+      await this.page.click('[aria-label="Account"] span, [aria-label="บัญชีผู้ใช้"] span, [aria-label="Your profile"] span, [aria-label="โปรไฟล์ของคุณ"] span');
+      
+      // รอให้เมนูปรากฏ
+      await this.page.waitForTimeout(1000);
+      
+      // คลิกที่ปุ่ม logout
+      await this.page.click('text/Log Out, text/ออกจากระบบ');
+      
+      // รอให้ล็อกเอาต์เสร็จสิ้น
+      await this.page.waitForNavigation({ waitUntil: 'networkidle2' });
+      
+      // ตรวจสอบว่าล็อกเอาต์แล้ว
+      this.isLoggedIn = await this.checkIfLoggedIn();
+      
+      if (!this.isLoggedIn) {
+        logger.info(`Logout successful for account: ${this.account.email}`);
+        
+        // อัปเดตสถานะล็อกอิน
+        this.account.loginStatus = 'unknown';
+        await this.account.save();
+        
+        return true;
+      } else {
+        logger.error(`Logout failed for account: ${this.account.email}`);
+        return false;
+      }
+    } catch (error) {
+      logger.error(`Logout failed: ${error.message}`);
+      return false;
     }
   }
 }

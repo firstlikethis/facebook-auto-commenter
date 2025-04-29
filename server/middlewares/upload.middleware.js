@@ -1,4 +1,3 @@
-// server/middlewares/upload.middleware.js
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs-extra');
@@ -30,7 +29,7 @@ const fileFilter = (req, file, cb) => {
   if (isValid && mimeTypeValid) {
     cb(null, true);
   } else {
-    cb(new ErrorResponse('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น (jpg, jpeg, png, gif)', 400), false);
+    cb(new Error('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น (jpg, jpeg, png, gif)'), false);
   }
 };
 

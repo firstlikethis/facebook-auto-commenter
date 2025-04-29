@@ -37,10 +37,12 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // File upload
-app.use(fileUpload({
-  createParentPath: true,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
-}));
+// app.use(fileUpload({
+//   createParentPath: true,
+//   limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+// }));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Security middleware
 app.use(helmet()); // ตั้งค่า security headers

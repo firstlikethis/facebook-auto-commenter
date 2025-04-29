@@ -1,5 +1,5 @@
 // client/src/pages/facebook/AccountList.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -15,7 +15,8 @@ import {
   Refresh as RefreshIcon,
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
-  HelpOutline as UnknownIcon
+  HelpOutline as UnknownIcon,
+  Autorenew as PendingIcon
 } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 
@@ -37,10 +38,35 @@ const AccountList = () => {
   });
 
   // โหลดข้อมูลบัญชี Facebook
-  const { data, isLoading, error } = useQuery(
+  const { data, isLoading, error, refetch } = useQuery(
     'facebookAccounts',
-    () => facebookAccountService.getAccounts()
+    () => facebookAccountService.getAccounts(),
+    {
+      // ดึงข้อมูลทุก 500ms ถ้ามีบัญชีที่กำลังทดสอบล็อกอิน (เร็วขึ้นจากเดิม)
+      refetchInterval: (data) => {
+        if (data?.data && Array.isArray(data.data)) {
+          const hasPendingAccount = data.data.some(account => account.loginStatus === 'pending');
+          return hasPendingAccount ? 500 : false;
+        }
+        return false;
+      }
+    }
   );
+
+  // เพิ่ม useEffect เพื่อรีเฟรชข้อมูลเมื่อมี pending account
+  useEffect(() => {
+    // ตั้งเวลารีเฟรชข้อมูลทุก 1 วินาที
+    const intervalId = setInterval(() => {
+      if (data?.data && Array.isArray(data.data)) {
+        const hasPendingAccount = data.data.some(account => account.loginStatus === 'pending');
+        if (hasPendingAccount) {
+          refetch();
+        }
+      }
+    }, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [data, refetch]);
 
   // Mutation สำหรับสร้างบัญชีใหม่
   const createMutation = useMutation(
@@ -77,8 +103,10 @@ const AccountList = () => {
     (id) => facebookAccountService.testLogin(id),
     {
       onSuccess: () => {
-        queryClient.invalidateQueries('facebookAccounts');
-        toast.success('ทดสอบล็อกอินสำเร็จ');
+        // ใช้ toast() หรือ toast.success() แทน toast.info()
+        toast('กำลังทดสอบล็อกอิน กรุณารอสักครู่...');
+        // ทำการรีเฟรชข้อมูลทันที
+        refetch();
       },
       onError: (error) => {
         toast.error(`เกิดข้อผิดพลาด: ${error.response?.data?.message || error.message}`);
@@ -136,17 +164,19 @@ const AccountList = () => {
         return <SuccessIcon color="success" />;
       case 'failed':
         return <ErrorIcon color="error" />;
+      case 'pending':
+        return <PendingIcon color="warning" />;
       default:
         return <UnknownIcon color="disabled" />;
     }
   };
 
-  const getStatusLabel = (status) => {
+  const getStatusLabel = (status, error) => {
     switch (status) {
       case 'success':
         return 'ล็อกอินสำเร็จ';
       case 'failed':
-        return 'ล็อกอินล้มเหลว';
+        return error ? `ล้มเหลว: ${error}` : 'ล็อกอินล้มเหลว';
       case 'pending':
         return 'กำลังดำเนินการ';
       default:
@@ -218,7 +248,7 @@ const AccountList = () => {
                     <Stack direction="row" spacing={1} alignItems="center">
                       {getStatusIcon(account.loginStatus)}
                       <Typography variant="body2">
-                        {getStatusLabel(account.loginStatus)}
+                        {getStatusLabel(account.loginStatus, account.error)}
                       </Typography>
                     </Stack>
                   </TableCell>
@@ -241,9 +271,10 @@ const AccountList = () => {
                         <IconButton 
                           color="info"
                           onClick={() => handleTestLogin(account._id)}
-                          disabled={testLoginMutation.isLoading}
+                          disabled={testLoginMutation.isLoading || account.loginStatus === 'pending'}
                         >
-                          <RefreshIcon />
+                          {account.loginStatus === 'pending' ? 
+                            <CircularProgress size={24} /> : <RefreshIcon />}
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="ลบ">

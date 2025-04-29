@@ -31,6 +31,10 @@ const FacebookAccountSchema = new mongoose.Schema({
     enum: ['success', 'failed', 'pending', 'unknown'],
     default: 'unknown'
   },
+  error: {
+    type: String,
+    default: null
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

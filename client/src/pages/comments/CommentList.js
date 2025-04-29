@@ -1,5 +1,5 @@
 // client/src/pages/comments/CommentList.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -19,7 +19,7 @@ import {
   ClearAll as ClearAllIcon,
   CheckCircleOutline as SuccessIcon,
   Cancel as ErrorIcon,
-  Comment as CommentIcon // Added the missing import here
+  Comment as CommentIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -50,43 +50,115 @@ const CommentList = () => {
   const [cleanupDays, setCleanupDays] = useState(30);
   const [selectedComment, setSelectedComment] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // ดึงข้อมูลคอมเมนต์
-  const { data, isLoading, error } = useQuery(
+  const commentsQuery = useQuery(
     ['comments', page, limit, search, filter, dateFilter],
     async () => {
-      const params = { page, limit, search };
-      
-      // เพิ่มตัวกรอง
-      if (filter.groupId) params.groupId = filter.groupId;
-      if (filter.keywordMatched) params.keywordMatched = filter.keywordMatched;
-      if (filter.success !== '') params.success = filter.success;
-      if (dateFilter.fromDate) params.fromDate = dateFilter.fromDate;
-      if (dateFilter.toDate) params.toDate = dateFilter.toDate;
-      
-      const response = await api.get('/comments', { params });
-      return response.data;
+      try {
+        const params = { page, limit, search };
+        
+        // เพิ่มตัวกรอง
+        if (filter.groupId) params.groupId = filter.groupId;
+        if (filter.keywordMatched) params.keywordMatched = filter.keywordMatched;
+        if (filter.success !== '') params.success = filter.success;
+        if (dateFilter.fromDate) params.fromDate = dateFilter.fromDate;
+        if (dateFilter.toDate) params.toDate = dateFilter.toDate;
+        
+        const response = await api.get('/comments', { params });
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching comments:', error);
+        // ถ้ามี error ให้ throw เพื่อให้ react-query จัดการ
+        throw new Error(error.response?.data?.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
+      }
     },
     {
-      keepPreviousData: true
+      keepPreviousData: true,
+      retry: 2, // พยายามดึงข้อมูลใหม่ 2 ครั้งหากเกิด error
+      staleTime: 30000, // ข้อมูลจะถือว่าเก่าหลังจาก 30 วินาที
+      onError: (error) => {
+        console.error('Comments data error:', error);
+        toast.error('ไม่สามารถโหลดข้อมูลคอมเมนต์ได้: ' + error.message);
+      }
     }
   );
 
-  // ดึงข้อมูลกลุ่ม
-  const { data: groupsData } = useQuery(
+  // ดึงข้อมูลกลุ่ม - แยกการโหลดและใช้ stale time ที่นานขึ้น
+  const groupsQuery = useQuery(
     'all-groups',
     async () => {
-      const response = await api.get('/groups', { params: { limit: 100 } });
-      return response.data.data;
+      try {
+        const response = await api.get('/groups', { params: { limit: 100 } });
+        return response.data.data || [];
+      } catch (error) {
+        console.error('Error fetching groups:', error);
+        return []; // ส่งคืนอาร์เรย์ว่างถ้าเกิด error
+      }
+    },
+    {
+      staleTime: 300000, // 5 นาที
+      retry: 2,
+      onError: (error) => {
+        console.error('Groups data error:', error);
+        // ไม่แสดง toast error สำหรับข้อมูลที่ไม่ critical
+      }
     }
   );
 
-  // ดึงข้อมูลคำสำคัญ
-  const { data: keywordsData } = useQuery(
+  // ดึงข้อมูลคำสำคัญ - แยกการโหลดและใช้ stale time ที่นานขึ้น
+  const keywordsQuery = useQuery(
     'all-keywords',
     async () => {
-      const response = await api.get('/keywords/categories');
-      return response.data.data;
+      try {
+        const response = await api.get('/keywords/categories');
+        return response.data.data || [];
+      } catch (error) {
+        console.error('Error fetching keywords:', error);
+        return []; // ส่งคืนอาร์เรย์ว่างถ้าเกิด error
+      }
+    },
+    {
+      staleTime: 300000, // 5 นาที
+      retry: 2,
+      onError: (error) => {
+        console.error('Keywords data error:', error);
+        // ไม่แสดง toast error สำหรับข้อมูลที่ไม่ critical
+      }
+    }
+  );
+
+  // สถิติคอมเมนต์ - โหลดแยกและใช้ stale time สั้นกว่า
+  const statsQuery = useQuery(
+    'comments-stats',
+    async () => {
+      try {
+        const response = await api.get('/comments/stats');
+        return response.data.data || {
+          total: 0,
+          today: 0,
+          last7Days: 0,
+          successRate: 0
+        };
+      } catch (error) {
+        console.error('Error fetching comment stats:', error);
+        // ส่งคืนข้อมูลเริ่มต้นถ้าเกิด error
+        return {
+          total: 0,
+          today: 0,
+          last7Days: 0,
+          successRate: 0
+        };
+      }
+    },
+    {
+      staleTime: 60000, // 1 นาที
+      retry: 1,
+      onError: (error) => {
+        console.error('Stats data error:', error);
+        // ไม่แสดง toast error สำหรับข้อมูลที่ไม่ critical
+      }
     }
   );
 
@@ -207,23 +279,35 @@ const CommentList = () => {
     }
   };
 
-  // สถิติคอมเมนต์
-  const { data: statsData, isLoading: isLoadingStats } = useQuery(
-    'comments-stats',
-    async () => {
-      const response = await api.get('/comments/stats');
-      return response.data.data;
-    }
-  );
-
-  // แสดงชื่อกลุ่ม
+  // แสดงชื่อกลุ่ม - มีการตรวจสอบว่า groupsData มีค่าหรือไม่
   const getGroupName = (groupId) => {
-    if (!groupsData) return groupId;
-    const group = groupsData.find(g => g.groupId === groupId);
+    if (!groupId) return '-';
+    
+    // ตรวจสอบว่ามี groupsData หรือไม่
+    const groups = groupsQuery.data || [];
+    const group = groups.find(g => g?.groupId === groupId);
+    
     return group ? group.name : groupId;
   };
 
-  if (isLoading) {
+  // ฟังก์ชันสำหรับโหลดข้อมูลใหม่
+  const handleRefreshData = () => {
+    setIsRetrying(true);
+    
+    // Invalidate queries ทั้งหมดที่เกี่ยวข้อง
+    queryClient.invalidateQueries(['comments']);
+    queryClient.invalidateQueries('comments-stats');
+    queryClient.invalidateQueries('all-groups');
+    queryClient.invalidateQueries('all-keywords');
+    
+    // ตั้งเวลาปิดการแสดง "กำลังลองใหม่..." หลังจาก 2 วินาที
+    setTimeout(() => {
+      setIsRetrying(false);
+    }, 2000);
+  };
+
+  // ถ้ากำลังโหลดข้อมูล
+  if (commentsQuery.isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <CircularProgress />
@@ -231,16 +315,17 @@ const CommentList = () => {
     );
   }
 
-  if (error) {
+  // ถ้าเกิด error และไม่ได้กำลังลองใหม่
+  if (commentsQuery.error && !isRetrying) {
     return (
       <Box p={3}>
         <Typography color="error">
-          เกิดข้อผิดพลาดในการโหลดข้อมูล: {error.message}
+          เกิดข้อผิดพลาดในการโหลดข้อมูล: {commentsQuery.error.message}
         </Typography>
         <Button 
           variant="contained" 
           startIcon={<RefreshIcon />} 
-          onClick={() => queryClient.invalidateQueries(['comments'])}
+          onClick={handleRefreshData}
           sx={{ mt: 2 }}
         >
           ลองใหม่
@@ -249,8 +334,17 @@ const CommentList = () => {
     );
   }
 
-  const comments = data?.data || [];
-  const totalComments = data?.total || 0;
+  // ดึงข้อมูลจาก query ด้วยการตรวจสอบค่า null/undefined
+  const comments = commentsQuery.data?.data || [];
+  const totalComments = commentsQuery.data?.total || 0;
+  const categories = keywordsQuery.data || [];
+  const isLoadingStats = statsQuery.isLoading;
+  const statsData = statsQuery.data || {
+    total: 0,
+    today: 0,
+    last7Days: 0,
+    successRate: 0
+  };
 
   return (
     <Box p={3}>
@@ -271,7 +365,7 @@ const CommentList = () => {
               variant="outlined"
               color="primary"
               startIcon={<RefreshIcon />}
-              onClick={() => handleExportComments()}
+              onClick={handleExportComments}
             >
               ส่งออกข้อมูล
             </Button>
@@ -359,6 +453,17 @@ const CommentList = () => {
             ตัวกรอง {Object.values(filter).some(val => val !== '') || 
                     Object.values(dateFilter).some(val => val !== '') ? '(กำลังใช้งาน)' : ''}
           </Button>
+          {/* เพิ่มปุ่ม Refresh */}
+          <Button
+            variant="outlined"
+            color="secondary"
+            startIcon={<RefreshIcon />}
+            onClick={handleRefreshData}
+            size="small"
+            disabled={isRetrying}
+          >
+            {isRetrying ? 'กำลังลองใหม่...' : 'รีเฟรช'}
+          </Button>
         </Stack>
       </Paper>
 
@@ -394,7 +499,7 @@ const CommentList = () => {
                 {comments.map((comment) => (
                   <TableRow key={comment._id}>
                     <TableCell>
-                      {format(new Date(comment.createdAt), 'dd/MM/yyyy HH:mm:ss')}
+                      {comment.createdAt ? format(new Date(comment.createdAt), 'dd/MM/yyyy HH:mm:ss') : '-'}
                     </TableCell>
                     <TableCell>
                       <Tooltip title={comment.groupId || '-'}>
@@ -414,7 +519,7 @@ const CommentList = () => {
                     <TableCell>
                       <Tooltip title={comment.messageUsed || '-'}>
                         <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
-                          {comment.messageUsed}
+                          {comment.messageUsed || '-'}
                         </Typography>
                       </Tooltip>
                     </TableCell>
@@ -489,10 +594,12 @@ const CommentList = () => {
                   label="กลุ่ม"
                 >
                   <MenuItem value="">ทั้งหมด</MenuItem>
-                  {groupsData && groupsData.map((group) => (
-                    <MenuItem key={group.groupId} value={group.groupId}>
-                      {group.name}
-                    </MenuItem>
+                  {groupsQuery.data && groupsQuery.data.map((group) => (
+                    group && group.groupId ? (
+                      <MenuItem key={group.groupId} value={group.groupId}>
+                        {group.name}
+                      </MenuItem>
+                    ) : null
                   ))}
                 </Select>
               </FormControl>
@@ -508,10 +615,12 @@ const CommentList = () => {
                   label="คำสำคัญ"
                 >
                   <MenuItem value="">ทั้งหมด</MenuItem>
-                  {keywordsData && keywordsData.map((keyword) => (
-                    <MenuItem key={keyword} value={keyword}>
-                      {keyword}
-                    </MenuItem>
+                  {categories && categories.map((keyword) => (
+                    keyword ? (
+                      <MenuItem key={keyword} value={keyword}>
+                        {keyword}
+                      </MenuItem>
+                    ) : null
                   ))}
                 </Select>
               </FormControl>
@@ -594,7 +703,7 @@ const CommentList = () => {
             label="จำนวนวัน"
             type="number"
             value={cleanupDays}
-            onChange={(e) => setCleanupDays(parseInt(e.target.value))}
+            onChange={(e) => setCleanupDays(parseInt(e.target.value) || 30)}
             fullWidth
             InputProps={{
               inputProps: { min: 1 }

@@ -88,7 +88,7 @@ const KeywordDetail = () => {
 
   // Mutation สำหรับอัปโหลดรูปภาพ
   const uploadMutation = useMutation(
-    (formData) => keywordService.uploadImage(id, selectedImage), // ส่ง selectedImage ตรงๆ แทน formData
+    (formData) => keywordService.uploadImage(id, formData),
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['keyword', id]);
@@ -271,6 +271,11 @@ const KeywordDetail = () => {
     const formData = new FormData();
     formData.append('image', selectedImage);
     
+    console.log("Form data created:", {
+      hasImage: formData.has('image'),
+      imageType: selectedImage.type
+    });
+  
     // เรียกใช้ mutation เพื่ออัปโหลด
     uploadMutation.mutate(formData);
   };

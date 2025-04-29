@@ -1,11 +1,11 @@
-
 // server/controllers/group.controller.js
 const Group = require('../models/Group');
 const Comment = require('../models/Comment');
 const FacebookAccount = require('../models/FacebookAccount');
 const asyncHandler = require('../middlewares/async.middleware');
 const ErrorResponse = require('../utils/errorResponse');
-const facebookService = require('../services/facebookService');
+const FacebookService = require('../services/facebookService');
+const logger = require('../utils/logger');
 
 // @desc    Get all groups
 // @route   GET /api/groups
@@ -168,59 +168,88 @@ exports.deleteGroup = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.detectGroups = asyncHandler(async (req, res, next) => {
   const { facebookAccountId } = req.body;
+  let fbService = null;
   
-  if (!facebookAccountId) {
-    return next(new ErrorResponse('กรุณาระบุบัญชี Facebook ที่ต้องการใช้', 400));
-  }
-  
-  // Check if account exists and belongs to user
-  const account = await FacebookAccount.findOne({
-    _id: facebookAccountId,
-    user: req.user.id
-  });
-  
-  if (!account) {
-    return next(new ErrorResponse(`ไม่พบบัญชี Facebook ที่มี ID ${facebookAccountId}`, 404));
-  }
-  
-  // Initialize Facebook service and detect groups
-  const groups = await facebookService.detectGroups(account);
-  
-  // Save detected groups to database
-  const savedGroups = [];
-  
-  for (const groupData of groups) {
-    // Check if group already exists
-    let existingGroup = await Group.findOne({ 
-      groupId: groupData.groupId,
+  try {
+    if (!facebookAccountId) {
+      return next(new ErrorResponse('กรุณาระบุบัญชี Facebook ที่ต้องการใช้', 400));
+    }
+    
+    // Check if account exists and belongs to user
+    const account = await FacebookAccount.findOne({
+      _id: facebookAccountId,
       user: req.user.id
     });
     
-    if (existingGroup) {
-      // Update existing group
-      existingGroup.name = groupData.name;
-      existingGroup.url = groupData.url;
-      existingGroup.facebookAccount = account._id;
-      await existingGroup.save();
-      savedGroups.push(existingGroup);
-    } else {
-      // Create new group
-      const newGroup = await Group.create({
+    if (!account) {
+      return next(new ErrorResponse(`ไม่พบบัญชี Facebook ที่มี ID ${facebookAccountId}`, 404));
+    }
+    
+    logger.info(`Starting group detection for account: ${account.email}`);
+    
+    // Initialize Facebook service
+    fbService = new FacebookService(account);
+    await fbService.initialize();
+    
+    // Login to Facebook
+    const loginSuccess = await fbService.login();
+    
+    if (!loginSuccess) {
+      return next(new ErrorResponse('ไม่สามารถเข้าสู่ระบบ Facebook ได้', 400));
+    }
+    
+    // Detect groups
+    const groups = await fbService.detectGroups();
+    logger.info(`Detected ${groups.length} groups for account: ${account.email}`);
+    
+    // Save detected groups to database
+    const savedGroups = [];
+    
+    for (const groupData of groups) {
+      // Check if group already exists
+      let existingGroup = await Group.findOne({ 
         groupId: groupData.groupId,
-        name: groupData.name,
-        url: groupData.url,
-        facebookAccount: account._id,
         user: req.user.id
       });
-      savedGroups.push(newGroup);
+      
+      if (existingGroup) {
+        // Update existing group
+        existingGroup.name = groupData.name;
+        existingGroup.url = groupData.url;
+        existingGroup.facebookAccount = account._id;
+        await existingGroup.save();
+        savedGroups.push(existingGroup);
+      } else {
+        // Create new group
+        const newGroup = await Group.create({
+          groupId: groupData.groupId,
+          name: groupData.name,
+          url: groupData.url,
+          facebookAccount: account._id,
+          user: req.user.id
+        });
+        savedGroups.push(newGroup);
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      count: savedGroups.length,
+      data: savedGroups
+    });
+  } catch (error) {
+    logger.error(`Error detecting groups: ${error.message}`);
+    return next(new ErrorResponse(`เกิดข้อผิดพลาดในการค้นหากลุ่ม: ${error.message}`, 500));
+  } finally {
+    // Close browser and clean up resources
+    if (fbService) {
+      try {
+        await fbService.close();
+      } catch (error) {
+        logger.error(`Error closing browser: ${error.message}`);
+      }
     }
   }
-  
-  res.status(200).json({
-    success: true,
-    count: savedGroups.length,
-    data: savedGroups
-  });
 });
 
 // @desc    Get group statistics

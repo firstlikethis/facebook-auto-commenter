@@ -85,36 +85,39 @@ export const keywordService = {
   },
 
   // Upload image - แก้ไขฟังก์ชันนี้ใหม่
-  async uploadImage(id, imageFile) {
+  async uploadImage(id, formData) {
     try {
-      // สร้าง FormData ใหม่
-      const formData = new FormData();
+      console.log("Uploading image for keyword:", id);
       
-      // ตรวจสอบว่า imageFile เป็นไฟล์ที่ใช้งานได้หรือไม่ ด้วยวิธีที่ยืดหยุ่นกว่า
-      if (imageFile && imageFile.name && imageFile.size > 0) {
-        // เพิ่มไฟล์เข้าไปโดยใช้ชื่อฟิลด์ "image" ให้ตรงกับที่เซิร์ฟเวอร์คาดหวัง
-        formData.append('image', imageFile);
-        
-        console.log('FormData created:', {
-          imageName: imageFile.name,
-          imageSize: imageFile.size,
-          imageType: imageFile.type,
-          hasImage: formData.has('image')
-        });
-        
-        // ส่งข้อมูล
-        const response = await api.post(`/keywords/${id}/upload-image`, formData);
-        
-        return response.data;
-      } else {
-        console.error('Invalid image file details:', {
-          file: imageFile,
-          hasName: Boolean(imageFile?.name),
-          hasSize: Boolean(imageFile?.size),
-          type: typeof imageFile
-        });
-        throw new Error('ไฟล์รูปภาพไม่ถูกต้อง กรุณาเลือกไฟล์ใหม่');
+      if (!formData.has('image')) {
+        throw new Error('ไม่พบไฟล์ภาพใน FormData');
       }
+      
+      // ตรวจสอบข้อมูลไฟล์ที่ส่ง
+      const imageFile = formData.get('image');
+      console.log("Image to upload:", {
+        name: imageFile.name,
+        type: imageFile.type,
+        size: imageFile.size
+      });
+  
+      // ใช้ fetch API แทน axios
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/keywords/${id}/upload-image`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'อัปโหลดล้มเหลว');
+      }
+      
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error(`Error uploading image for keyword ${id}:`, error);
       throw error;

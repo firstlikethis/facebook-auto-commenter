@@ -37,24 +37,38 @@ const AccountDetail = () => {
   const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
 
   // ดึงข้อมูลบัญชี
-  const { data, isLoading, error } = useQuery(
+  const { data, isLoading, error, refetch } = useQuery(
     ['facebook-account', id],
     async () => {
       const response = await api.get(`/facebook-accounts/${id}`);
-      return response.data.data;
+      return response.data;
     },
     {
       enabled: !!id,
       onSuccess: (data) => {
         setAccount({
-          email: data.email || '',
-          password: data.password || '',
-          name: data.name || '',
-          isActive: data.isActive !== undefined ? data.isActive : true
+          email: data.data.email || '',
+          password: data.data.password || '',
+          name: data.data.name || '',
+          isActive: data.data.isActive !== undefined ? data.data.isActive : true
         });
-      }
+      },
+      // ดึงข้อมูลทุก 500ms เมื่อสถานะเป็น pending (เร็วขึ้นเพื่อให้อัปเดตเร็วขึ้น)
+      refetchInterval: (data) => data?.data?.loginStatus === 'pending' ? 500 : false
     }
   );
+
+  // ดึงข้อมูลเมื่อมีการเปลี่ยนแปลงสถานะ
+  useEffect(() => {
+    // ตั้งเวลารีเฟรชข้อมูลทุก 1 วินาที
+    const intervalId = setInterval(() => {
+      if (data?.data?.loginStatus === 'pending') {
+        refetch();
+      }
+    }, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [data?.data?.loginStatus, refetch]);
 
   // Mutation สำหรับอัปเดตบัญชี
   const updateMutation = useMutation(
@@ -89,8 +103,10 @@ const AccountDetail = () => {
     () => api.post(`/facebook-accounts/${id}/test-login`),
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(['facebook-account', id]);
-        toast.success('ทดสอบล็อกอินสำเร็จ');
+        // ใช้ toast() หรือ toast.success() แทน toast.info()
+        toast('กำลังทดสอบล็อกอิน กรุณารอสักครู่...');
+        // ทำการรีเฟรชข้อมูลทันที
+        refetch();
       },
       onError: (error) => {
         toast.error(`เกิดข้อผิดพลาด: ${error.response?.data?.message || error.message}`);
@@ -115,7 +131,7 @@ const AccountDetail = () => {
   const getStatusIcon = () => {
     if (!data) return null;
 
-    switch (data.loginStatus) {
+    switch (data.data.loginStatus) {
       case 'success':
         return <SuccessIcon color="success" fontSize="large" />;
       case 'failed':
@@ -130,7 +146,7 @@ const AccountDetail = () => {
   const getStatusColor = () => {
     if (!data) return 'info';
 
-    switch (data.loginStatus) {
+    switch (data.data.loginStatus) {
       case 'success': return 'success';
       case 'failed': return 'error';
       case 'pending': return 'warning';
@@ -141,12 +157,20 @@ const AccountDetail = () => {
   const getStatusText = () => {
     if (!data) return 'ไม่ทราบสถานะ';
 
-    switch (data.loginStatus) {
+    switch (data.data.loginStatus) {
       case 'success': return 'เข้าสู่ระบบสำเร็จ';
       case 'failed': return 'เข้าสู่ระบบล้มเหลว';
       case 'pending': return 'กำลังดำเนินการ';
       default: return 'ไม่ทราบสถานะ';
     }
+  };
+
+  // ข้อความแสดงสาเหตุของความล้มเหลว (ถ้ามี)
+  const getErrorMessage = () => {
+    if (data?.data?.loginStatus === 'failed' && data?.data?.error) {
+      return data.data.error;
+    }
+    return null;
   };
 
   if (isLoading) {
@@ -268,9 +292,10 @@ const AccountDetail = () => {
                 color="primary"
                 startIcon={<RefreshIcon />}
                 onClick={() => testLoginMutation.mutate()}
-                disabled={testLoginMutation.isLoading}
+                disabled={testLoginMutation.isLoading || data?.data?.loginStatus === 'pending'}
               >
-                {testLoginMutation.isLoading ? <CircularProgress size={24} /> : 'ทดสอบล็อกอิน'}
+                {testLoginMutation.isLoading || data?.data?.loginStatus === 'pending' ? 
+                  <CircularProgress size={24} /> : 'ทดสอบล็อกอิน'}
               </Button>
 
               <Button
@@ -302,11 +327,16 @@ const AccountDetail = () => {
               <Alert severity={getStatusColor()} sx={{ mb: 2 }}>
                 <AlertTitle>ข้อมูลล่าสุด</AlertTitle>
                 <Typography variant="body2">
-                  <strong>เข้าสู่ระบบล่าสุด:</strong> {data.lastLogin ? format(new Date(data.lastLogin), 'dd/MM/yyyy HH:mm:ss') : 'ไม่มีข้อมูล'}
+                  <strong>เข้าสู่ระบบล่าสุด:</strong> {data.data.lastLogin ? format(new Date(data.data.lastLogin), 'dd/MM/yyyy HH:mm:ss') : 'ไม่มีข้อมูล'}
                 </Typography>
                 <Typography variant="body2">
-                  <strong>Cookies:</strong> {data.cookiesPath ? 'มีข้อมูล' : 'ไม่มีข้อมูล'}
+                  <strong>Cookies:</strong> {data.data.cookiesPath ? 'มีข้อมูล' : 'ไม่มีข้อมูล'}
                 </Typography>
+                {getErrorMessage() && (
+                  <Typography variant="body2" color="error" mt={1}>
+                    <strong>สาเหตุ:</strong> {getErrorMessage()}
+                  </Typography>
+                )}
               </Alert>
 
               <Typography variant="body2" color="textSecondary">
