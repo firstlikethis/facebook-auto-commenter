@@ -316,10 +316,13 @@ class ScannerService {
           await group.save();
           
           // รอก่อนเริ่มสแกนกลุ่มถัดไป
+          // แก้ไขส่วนนี้ - เพิ่มการตรวจสอบค่า undefined
+          const delayMin = settings.delaySettings?.betweenGroups?.min || 5000;
+          const delayMax = settings.delaySettings?.betweenGroups?.max || 15000;
+          
           await new Promise(resolve => setTimeout(
             resolve, 
-            settings.delays.betweenGroups.min + 
-            Math.random() * (settings.delays.betweenGroups.max - settings.delays.betweenGroups.min)
+            delayMin + Math.random() * (delayMax - delayMin)
           ));
         } catch (error) {
           logger.error(`Error scanning group ${group.name}: ${error.message}`);

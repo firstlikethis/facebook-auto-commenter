@@ -214,6 +214,17 @@ const TaskDetail = () => {
         return <InfoIcon />;
     }
   };
+  
+  // แสดงชื่อกลุ่มอย่างปลอดภัย
+  const renderGroupName = (group) => {
+    if (!group) return 'ไม่ระบุชื่อกลุ่ม';
+    
+    if (typeof group === 'object') {
+      return group.name || 'ไม่ระบุชื่อกลุ่ม';
+    }
+    
+    return `ID: ${group}`;
+  };
 
   if (isLoading) {
     return (
@@ -400,22 +411,24 @@ const TaskDetail = () => {
                   <Divider sx={{ mb: 2 }} />
                   
                   <List>
-                    {data.groups && data.groups.map((group, index) => (
-                      <ListItem key={index} divider={index < data.groups.length - 1}>
-                        <ListItemText
-                          primary={group.name}
-                          secondary={`ID: ${group.groupId}`}
-                        />
-                        <Button 
-                          size="small" 
-                          onClick={() => navigate(`/groups/${group._id}`)}
-                        >
-                          ดูกลุ่ม
-                        </Button>
-                      </ListItem>
-                    ))}
-                    
-                    {(!data.groups || data.groups.length === 0) && (
+                    {data.groups && data.groups.length > 0 ? (
+                      data.groups.map((group, index) => (
+                        <ListItem key={index} divider={index < data.groups.length - 1}>
+                          <ListItemText
+                            primary={renderGroupName(group)}
+                            secondary={typeof group === 'object' ? `ID: ${group.groupId || 'ไม่ระบุ'}` : ''}
+                          />
+                          {typeof group === 'object' && group._id && (
+                            <Button 
+                              size="small" 
+                              onClick={() => navigate(`/groups/${group._id}`)}
+                            >
+                              ดูกลุ่ม
+                            </Button>
+                          )}
+                        </ListItem>
+                      ))
+                    ) : (
                       <ListItem>
                         <ListItemText primary="ไม่พบข้อมูลกลุ่ม" />
                       </ListItem>
@@ -437,25 +450,33 @@ const TaskDetail = () => {
                   {data.facebookAccount ? (
                     <Box>
                       <Typography variant="body1">
-                        <strong>ชื่อ:</strong> {data.facebookAccount.name || '-'}
+                        <strong>ชื่อ:</strong> {typeof data.facebookAccount === 'object' 
+                          ? (data.facebookAccount.name || '-') 
+                          : 'ID: ' + data.facebookAccount}
                       </Typography>
                       <Typography variant="body1">
-                        <strong>อีเมล:</strong> {data.facebookAccount.email}
+                        <strong>อีเมล:</strong> {typeof data.facebookAccount === 'object' 
+                          ? data.facebookAccount.email 
+                          : 'ไม่ระบุ'}
                       </Typography>
                       <Typography variant="body1">
-                        <strong>สถานะ:</strong> {data.facebookAccount.loginStatus === 'success' 
-                          ? 'ล็อกอินสำเร็จ' 
-                          : data.facebookAccount.loginStatus === 'failed'
-                            ? 'ล็อกอินล้มเหลว'
-                            : 'ไม่ทราบสถานะ'}
+                        <strong>สถานะ:</strong> {typeof data.facebookAccount === 'object' && data.facebookAccount.loginStatus
+                          ? (data.facebookAccount.loginStatus === 'success' 
+                              ? 'ล็อกอินสำเร็จ' 
+                              : data.facebookAccount.loginStatus === 'failed'
+                                ? 'ล็อกอินล้มเหลว'
+                                : 'ไม่ทราบสถานะ')
+                          : 'ไม่ทราบสถานะ'}
                       </Typography>
-                      <Button 
-                        size="small" 
-                        sx={{ mt: 2 }}
-                        onClick={() => navigate(`/facebook-accounts/${data.facebookAccount._id}`)}
-                      >
-                        ดูบัญชี
-                      </Button>
+                      {typeof data.facebookAccount === 'object' && data.facebookAccount._id && (
+                        <Button 
+                          size="small" 
+                          sx={{ mt: 2 }}
+                          onClick={() => navigate(`/facebook-accounts/${data.facebookAccount._id}`)}
+                        >
+                          ดูบัญชี
+                        </Button>
+                      )}
                     </Box>
                   ) : (
                     <Typography variant="body1">ไม่พบข้อมูลบัญชี</Typography>

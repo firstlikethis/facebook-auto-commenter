@@ -1,6 +1,0 @@
-2025/04/25-11:12:43.984 249c Reusing MANIFEST D:\Workspace\My Project\facebook-auto-commenter\server\user-data\account_6809b4b2076a571e1dbd2751\Default\Local Storage\leveldb/MANIFEST-000001
-2025/04/25-11:12:43.984 249c Recovering log #4
-2025/04/25-11:12:43.985 249c Reusing old log D:\Workspace\My Project\facebook-auto-commenter\server\user-data\account_6809b4b2076a571e1dbd2751\Default\Local Storage\leveldb/000004.log 
-2025/04/25-11:13:44.730 23a8 Level-0 table #7: started
-2025/04/25-11:13:44.734 23a8 Level-0 table #7: 16319 bytes OK
-2025/04/25-11:13:44.737 23a8 Delete type=0 #4

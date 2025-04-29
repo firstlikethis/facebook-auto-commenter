@@ -13,8 +13,6 @@ import {
   ArrowBack as BackIcon,
   PlayArrow as StartIcon
 } from '@mui/icons-material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -156,8 +154,14 @@ const NewTask = () => {
     }
   };
 
-  const handleDateChange = (newDate) => {
-    setTask(prevTask => ({ ...prevTask, scheduledTime: newDate }));
+  const handleDateChange = (e) => {
+    try {
+      // แปลงค่าจาก input เป็น Date object
+      const dateValue = new Date(e.target.value);
+      setTask(prevTask => ({ ...prevTask, scheduledTime: dateValue }));
+    } catch (error) {
+      console.error("Invalid date format:", error);
+    }
   };
 
   const handleGroupsChange = (event) => {
@@ -206,6 +210,11 @@ const NewTask = () => {
 
   const groups = groupsData?.data || [];
   const accounts = accountsData?.data || [];
+
+  // Format the current date and time for the datetime-local input
+  const formatDateTimeForInput = (date) => {
+    return format(date, "yyyy-MM-dd'T'HH:mm");
+  };
 
   return (
     <Box p={3}>
@@ -332,20 +341,17 @@ const NewTask = () => {
               </Grid>
               
               <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DateTimePicker
-                    label="วันและเวลาที่ต้องการสแกน"
-                    value={task.scheduledTime}
-                    onChange={handleDateChange}
-                    ampm={false}
-                    format="dd/MM/yyyy HH:mm"
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                      },
-                    }}
-                  />
-                </LocalizationProvider>
+                {/* แทนที่ DateTimePicker ด้วย TextField ชั่วคราว */}
+                <TextField
+                  label="วันและเวลาที่ต้องการสแกน"
+                  type="datetime-local"
+                  value={formatDateTimeForInput(task.scheduledTime)}
+                  onChange={handleDateChange}
+                  fullWidth
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                />
               </Grid>
               
               <Grid item xs={12}>
