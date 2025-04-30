@@ -94,6 +94,7 @@ const CommentList = () => {
         return response.data.data || [];
       } catch (error) {
         console.error('Error fetching groups:', error);
+        // ส่งค่าเริ่มต้นกลับเพื่อไม่ให้แอปพลิเคชันพัง
         return []; // ส่งคืนอาร์เรย์ว่างถ้าเกิด error
       }
     },
@@ -257,13 +258,52 @@ const CommentList = () => {
       if (dateFilter.toDate) params.toDate = dateFilter.toDate;
       if (search) params.search = search;
       
-      const response = await api.get('/comments/export', {
-        params,
-        responseType: 'blob'
+      // ดึงข้อมูลคอมเมนต์ที่จะส่งออก
+      const response = await api.get('/comments', {
+        params: {
+          ...params,
+          limit: 1000 // ขอข้อมูลจำนวนมากเพื่อส่งออก
+        }
       });
       
+      // ถ้าไม่มีข้อมูล
+      if (!response.data?.data || response.data.data.length === 0) {
+        toast.error('ไม่มีข้อมูลสำหรับส่งออก');
+        return;
+      }
+      
+      // แปลงข้อมูลให้เหมาะสมสำหรับ CSV
+      const comments = response.data.data;
+      const csvData = [];
+      
+      // สร้างหัวตาราง
+      const headers = [
+        'วันที่', 'กลุ่ม', 'ชื่อกลุ่ม', 'คำสำคัญ', 'ข้อความคอมเมนต์', 'สถานะ', 'URL'
+      ];
+      csvData.push(headers.join(','));
+      
+      // เพิ่มข้อมูลแต่ละแถว
+      comments.forEach(comment => {
+        const rowData = [
+          comment.createdAt ? format(new Date(comment.createdAt), 'dd/MM/yyyy HH:mm:ss') : '',
+          comment.groupId || '',
+          getGroupName(comment.groupId),
+          comment.keywordMatched || '',
+          // เอสเคปคอมม่าและเครื่องหมายคำพูดในข้อความ
+          `"${(comment.messageUsed || '').replace(/"/g, '""')}"`,
+          comment.success ? 'สำเร็จ' : 'ล้มเหลว',
+          comment.postUrl || ''
+        ];
+        
+        csvData.push(rowData.join(','));
+      });
+      
+      // สร้างไฟล์ CSV
+      const csvContent = csvData.join('\n');
+      const blob = new Blob(["\ufeff", csvContent], { type: 'text/csv;charset=utf-8;' });
+      
       // สร้าง URL สำหรับดาวน์โหลด
-      const url = window.URL.createObjectURL(new Blob([response]));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `comments-export-${format(new Date(), 'yyyy-MM-dd')}.csv`);
@@ -275,17 +315,20 @@ const CommentList = () => {
       
       toast.success('ส่งออกข้อมูลสำเร็จ');
     } catch (error) {
+      console.error('Export error:', error);
       toast.error('เกิดข้อผิดพลาดในการส่งออกข้อมูล');
     }
   };
 
-  // แสดงชื่อกลุ่ม - มีการตรวจสอบว่า groupsData มีค่าหรือไม่
+  // แสดงชื่อกลุ่ม - แก้ไขให้ตรวจสอบว่า groupsQuery.data เป็น array หรือไม่
   const getGroupName = (groupId) => {
     if (!groupId) return '-';
     
-    // ตรวจสอบว่ามี groupsData หรือไม่
-    const groups = groupsQuery.data || [];
-    const group = groups.find(g => g?.groupId === groupId);
+    // ตรวจสอบว่ามี groupsData หรือไม่ และเป็น array หรือไม่
+    const groups = Array.isArray(groupsQuery.data) ? groupsQuery.data : [];
+    
+    // ตรวจสอบว่ามี group ที่ตรงกับ groupId หรือไม่
+    const group = groups.find(g => g && g.groupId === groupId);
     
     return group ? group.name : groupId;
   };
@@ -594,7 +637,7 @@ const CommentList = () => {
                   label="กลุ่ม"
                 >
                   <MenuItem value="">ทั้งหมด</MenuItem>
-                  {groupsQuery.data && groupsQuery.data.map((group) => (
+                  {Array.isArray(groupsQuery.data) && groupsQuery.data.map((group) => (
                     group && group.groupId ? (
                       <MenuItem key={group.groupId} value={group.groupId}>
                         {group.name}
