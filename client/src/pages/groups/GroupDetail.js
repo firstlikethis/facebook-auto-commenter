@@ -139,6 +139,12 @@ const GroupDetail = () => {
     setOpenConfirmScan(false);
   };
 
+  // เปลี่ยนเป็นการนำทางไปหน้าสร้างงานใหม่พร้อมระบุ groupId แทน
+  const handleScanRedirect = () => {
+    navigate(`/tasks/new?groupId=${id}`);
+    setOpenConfirmScan(false);
+  };
+
   const openGroupInFacebook = () => {
     if (group.url) {
       window.open(group.url, '_blank');
@@ -466,15 +472,15 @@ const GroupDetail = () => {
         confirmColor="error"
       />
 
-      {/* Dialog ยืนยันการสแกน */}
+      {/* Dialog ยืนยันการสแกน - เปลี่ยนให้ redirect ไปยังหน้าสร้างงานใหม่แทน */}
       <ConfirmDialog
         open={openConfirmScan}
         title="ยืนยันการสแกนกลุ่ม"
-        content={`คุณต้องการสแกนกลุ่ม "${group.name}" ทันทีใช่หรือไม่? ระบบจะสแกนโพสต์จำนวน ${group.postScanLimit} โพสต์`}
-        onConfirm={handleStartScan}
+        content={`คุณต้องการสแกนกลุ่ม "${group.name}" ทันทีใช่หรือไม่? ระบบจะนำคุณไปยังหน้าสร้างงานสแกนพร้อมเลือกกลุ่มนี้ให้อัตโนมัติ`}
+        onConfirm={handleScanRedirect}
         onCancel={() => setOpenConfirmScan(false)}
-        isLoading={scanMutation.isLoading}
-        confirmText="เริ่มสแกน"
+        isLoading={false}
+        confirmText="ไปยังหน้าสร้างงานสแกน"
         confirmColor="success"
       />
     </Box>

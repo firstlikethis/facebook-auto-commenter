@@ -52,16 +52,43 @@ const NewTask = () => {
     }
   });
 
-  // โหลดข้อมูลกลุ่ม
+  // โหลดข้อมูลเฉพาะกลุ่มที่ต้องการถ้ามี groupId
+  const { data: singleGroupData, isLoading: isLoadingSingleGroup } = useQuery(
+    ['single-group', groupId],
+    () => groupService.getGroup(groupId),
+    {
+      enabled: !!groupId,
+      retry: 1,
+      onError: (error) => {
+        console.error("Error fetching single group:", error);
+        toast.error("ไม่สามารถดึงข้อมูลกลุ่มได้");
+      }
+    }
+  );
+
+  // โหลดข้อมูลกลุ่มทั้งหมด
   const { data: groupsData, isLoading: isLoadingGroups } = useQuery(
     'all-groups',
-    () => groupService.getGroups(1, 100, { isActive: true, scanEnabled: true })
+    () => groupService.getGroups(1, 100, { isActive: true, scanEnabled: true }),
+    {
+      enabled: !groupId,
+      retry: 1,
+      onError: (error) => {
+        console.error("Error fetching all groups:", error);
+      }
+    }
   );
 
   // โหลดข้อมูลบัญชี Facebook
   const { data: accountsData, isLoading: isLoadingAccounts } = useQuery(
     'facebook-accounts',
-    () => facebookAccountService.getAccounts()
+    () => facebookAccountService.getAccounts(),
+    {
+      retry: 1,
+      onError: (error) => {
+        console.error("Error fetching Facebook accounts:", error);
+      }
+    }
   );
 
   // Mutation สำหรับสร้างงานใหม่
@@ -92,36 +119,45 @@ const NewTask = () => {
     }
   );
 
+  // สำหรับจัดการกรณีมี groupId ที่ส่งมาจากหน้า Group
   useEffect(() => {
-    // หากมีการส่ง groupId มา ให้ตั้งค่าเริ่มต้น
-    if (groupId && groupsData) {
-      const selectedGroup = groupsData.data.find(g => g._id === groupId);
-      if (selectedGroup) {
+    try {
+      if (groupId && singleGroupData && singleGroupData.data) {
+        // ถ้าดึงข้อมูลกลุ่มเดียวสำเร็จ
+        const selectedGroup = singleGroupData.data;
         setTask(prevTask => ({
           ...prevTask,
           groups: [selectedGroup._id],
           facebookAccount: selectedGroup.facebookAccount || ''
         }));
       }
+    } catch (error) {
+      console.error("Error setting group from URL parameter:", error);
     }
-    
-    // หากมีการ clone จากงานเดิม
-    if (location.state?.cloneFrom) {
-      const originalTask = location.state.cloneFrom;
-      setTask({
-        type: originalTask.type,
-        groups: originalTask.groups,
-        facebookAccount: originalTask.facebookAccount,
-        scheduledTime: new Date(), // ตั้งเป็นเวลาปัจจุบัน
-        useParallel: originalTask.settings?.useParallel || false,
-        settings: {
-          postScanLimit: originalTask.settings?.postScanLimit || 20,
-          workerCount: originalTask.settings?.workerCount || 3,
-          headless: originalTask.settings?.headless || true
-        }
-      });
+  }, [groupId, singleGroupData]);
+
+  // สำหรับการ clone งานจากงานเดิม
+  useEffect(() => {
+    try {
+      if (location.state?.cloneFrom) {
+        const originalTask = location.state.cloneFrom;
+        setTask({
+          type: originalTask.type,
+          groups: originalTask.groups,
+          facebookAccount: originalTask.facebookAccount,
+          scheduledTime: new Date(), // ตั้งเป็นเวลาปัจจุบัน
+          useParallel: originalTask.settings?.useParallel || false,
+          settings: {
+            postScanLimit: originalTask.settings?.postScanLimit || 20,
+            workerCount: originalTask.settings?.workerCount || 3,
+            headless: originalTask.settings?.headless || true
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error cloning from original task:", error);
     }
-  }, [groupId, groupsData, location.state]);
+  }, [location.state]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -200,7 +236,7 @@ const NewTask = () => {
     createTaskMutation.mutate(taskToCreate);
   };
 
-  if (isLoadingGroups || isLoadingAccounts) {
+  if (isLoadingGroups || isLoadingAccounts || isLoadingSingleGroup) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <CircularProgress />
@@ -208,7 +244,11 @@ const NewTask = () => {
     );
   }
 
-  const groups = groupsData?.data || [];
+  // สร้างรายการกลุ่มที่จะแสดงในตัวเลือก
+  const groups = groupId && singleGroupData?.data 
+    ? [singleGroupData.data] // กรณีมีการเลือกกลุ่มเดียวจาก URL
+    : (groupsData?.data || []); // กรณีแสดงกลุ่มทั้งหมด
+
   const accounts = accountsData?.data || [];
 
   // Format the current date and time for the datetime-local input
