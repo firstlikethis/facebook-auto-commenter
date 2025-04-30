@@ -5,7 +5,7 @@ import { useQuery } from 'react-query';
 import {
   Box, Typography, Button, CircularProgress, Paper, Grid, Divider,
   Card, CardContent, Tabs, Tab, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Chip
+  TableHead, TableRow, Chip, Stack
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -52,22 +52,32 @@ const GroupStats = () => {
 
   // แปลงข้อมูลสำหรับ keyword pie chart
   const prepareKeywordData = () => {
-    if (!data?.commentStats?.keywordStats) return [];
+    if (!data?.commentStats?.keywordStats || 
+        !Array.isArray(data.commentStats.keywordStats) || 
+        data.commentStats.keywordStats.length === 0) {
+      return [];
+    }
     
-    return data.commentStats.keywordStats.map((item, index) => ({
-      name: item._id,
-      value: item.count
-    }));
+    return data.commentStats.keywordStats.map((item, index) => {
+      const name = item._id || `คำสำคัญ ${index + 1}`;
+      const value = item.count || 0;
+      
+      return { name, value };
+    });
   };
 
   // แปลงข้อมูลสำหรับ comments timeline
   const prepareTimelineData = () => {
-    if (!commentsData?.data) return [];
+    if (!commentsData?.data || !Array.isArray(commentsData.data) || commentsData.data.length === 0) {
+      return [];
+    }
     
     // จัดกลุ่มตามวันที่
     const groupedByDate = {};
     
     commentsData.data.forEach(comment => {
+      if (!comment.createdAt) return;
+      
       const date = format(new Date(comment.createdAt), 'yyyy-MM-dd');
       if (!groupedByDate[date]) {
         groupedByDate[date] = 0;
@@ -106,6 +116,10 @@ const GroupStats = () => {
       </Box>
     );
   }
+
+  // เตรียมข้อมูลไว้สำหรับใช้ในหลายส่วน
+  const keywordData = prepareKeywordData();
+  const timelineData = prepareTimelineData();
 
   return (
     <Box p={3}>
@@ -167,7 +181,7 @@ const GroupStats = () => {
                       <strong>โพสต์ที่สแกน:</strong> {data.group.totalPostsScanned || 0} โพสต์
                     </Typography>
                     <Typography variant="body1">
-                      <strong>คอมเมนต์ทั้งหมด:</strong> {data.commentStats.total || 0} ข้อความ
+                      <strong>คอมเมนต์ทั้งหมด:</strong> {data.commentStats?.total || 0} ข้อความ
                     </Typography>
                     <Typography variant="body1">
                       <strong>สแกนล่าสุด:</strong> {data.group.lastScanDate 
@@ -189,13 +203,13 @@ const GroupStats = () => {
                   
                   <Box display="flex" flexDirection="column" gap={1}>
                     <Typography variant="body1">
-                      <strong>24 ชั่วโมงที่ผ่านมา:</strong> {data.commentStats.last24Hours || 0} คอมเมนต์
+                      <strong>24 ชั่วโมงที่ผ่านมา:</strong> {data.commentStats?.last24Hours || 0} คอมเมนต์
                     </Typography>
                     <Typography variant="body1">
-                      <strong>7 วันที่ผ่านมา:</strong> {data.commentStats.last7Days || 0} คอมเมนต์
+                      <strong>7 วันที่ผ่านมา:</strong> {data.commentStats?.last7Days || 0} คอมเมนต์
                     </Typography>
                     <Typography variant="body1">
-                      <strong>30 วันที่ผ่านมา:</strong> {data.commentStats.last30Days || 0} คอมเมนต์
+                      <strong>30 วันที่ผ่านมา:</strong> {data.commentStats?.last30Days || 0} คอมเมนต์
                     </Typography>
                   </Box>
                 </CardContent>
@@ -238,28 +252,34 @@ const GroupStats = () => {
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
                   
-                  <Box height={300}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={prepareKeywordData()}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {prepareKeywordData().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value) => [`${value} คอมเมนต์`, 'จำนวน']} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </Box>
+                  {keywordData.length === 0 ? (
+                    <Box height={300} display="flex" alignItems="center" justifyContent="center">
+                      <Typography color="textSecondary">ไม่พบข้อมูลคำสำคัญ</Typography>
+                    </Box>
+                  ) : (
+                    <Box height={300}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={keywordData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {keywordData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value) => [`${value} คอมเมนต์`, 'จำนวน']} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             </Grid>
@@ -272,24 +292,30 @@ const GroupStats = () => {
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
                   
-                  <Box height={300}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={prepareTimelineData()}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip formatter={(value) => [`${value} คอมเมนต์`, 'จำนวน']} />
-                        <Legend />
-                        <Line 
-                          type="monotone" 
-                          dataKey="count" 
-                          name="จำนวนคอมเมนต์" 
-                          stroke="#8884d8" 
-                          activeDot={{ r: 8 }} 
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Box>
+                  {timelineData.length === 0 ? (
+                    <Box height={300} display="flex" alignItems="center" justifyContent="center">
+                      <Typography color="textSecondary">ไม่พบข้อมูลคอมเมนต์</Typography>
+                    </Box>
+                  ) : (
+                    <Box height={300}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={timelineData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="date" />
+                          <YAxis />
+                          <Tooltip formatter={(value) => [`${value} คอมเมนต์`, 'จำนวน']} />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="count" 
+                            name="จำนวนคอมเมนต์" 
+                            stroke="#8884d8" 
+                            activeDot={{ r: 8 }} 
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             </Grid>
@@ -372,25 +398,31 @@ const GroupStats = () => {
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
                 
-                <Box height={400}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={prepareTimelineData()}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => [`${value} คอมเมนต์`, 'จำนวน']} />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="count" 
-                        name="จำนวนคอมเมนต์" 
-                        stroke="#8884d8" 
-                        strokeWidth={2}
-                        activeDot={{ r: 8 }} 
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Box>
+                {timelineData.length === 0 ? (
+                  <Box height={400} display="flex" alignItems="center" justifyContent="center">
+                    <Typography color="textSecondary">ไม่พบข้อมูลคอมเมนต์</Typography>
+                  </Box>
+                ) : (
+                  <Box height={400}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={timelineData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => [`${value} คอมเมนต์`, 'จำนวน']} />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="count" 
+                          name="จำนวนคอมเมนต์" 
+                          stroke="#8884d8" 
+                          strokeWidth={2}
+                          activeDot={{ r: 8 }} 
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -403,22 +435,28 @@ const GroupStats = () => {
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
                 
-                <Box height={350}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={prepareKeywordData()}
-                      layout="vertical"
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="name" width={100} />
-                      <Tooltip formatter={(value) => [`${value} ครั้ง`, 'จำนวนที่พบ']} />
-                      <Legend />
-                      <Bar dataKey="value" name="จำนวนที่พบ" fill="#82ca9d" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
+                {keywordData.length === 0 ? (
+                  <Box height={350} display="flex" alignItems="center" justifyContent="center">
+                    <Typography color="textSecondary">ไม่พบข้อมูลคำสำคัญ</Typography>
+                  </Box>
+                ) : (
+                  <Box height={350}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={keywordData}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" />
+                        <YAxis type="category" dataKey="name" width={100} />
+                        <Tooltip formatter={(value) => [`${value} ครั้ง`, 'จำนวนที่พบ']} />
+                        <Legend />
+                        <Bar dataKey="value" name="จำนวนที่พบ" fill="#82ca9d" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -431,29 +469,35 @@ const GroupStats = () => {
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
                 
-                <Box height={350}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={prepareKeywordData()}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        {prepareKeywordData().map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value} ครั้ง`, 'จำนวน']} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Box>
+                {keywordData.length === 0 ? (
+                  <Box height={350} display="flex" alignItems="center" justifyContent="center">
+                    <Typography color="textSecondary">ไม่พบข้อมูลคำสำคัญ</Typography>
+                  </Box>
+                ) : (
+                  <Box height={350}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={keywordData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          paddingAngle={5}
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value}`}
+                        >
+                          {keywordData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => [`${value} ครั้ง`, 'จำนวน']} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>
